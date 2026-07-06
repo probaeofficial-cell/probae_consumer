@@ -83,7 +83,7 @@ export default async function LandingPage() {
               {/* CTA Button with dashed offset border */}
               <FadeInUp delay={0.3} className="relative mb-14 group z-20">
                 <div className="absolute inset-0 border-2 border-dashed border-[#F97316] rounded-xl translate-x-1.5 translate-y-1.5 pointer-events-none transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
-                <Link href="/menu" className="relative bg-[#F97316] text-white px-8 py-4 md:px-10 md:py-5 rounded-xl font-bold text-lg md:text-xl flex items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-transform">
+                <Link href="/onboarding" className="relative bg-[#F97316] text-white px-8 py-4 md:px-10 md:py-5 rounded-xl font-bold text-lg md:text-xl flex items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-transform">
                   Order from Probae
                   <ArrowRight className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
                 </Link>
