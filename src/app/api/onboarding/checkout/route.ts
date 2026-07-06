@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     user = await User.findByIdAndUpdate(
       user._id, 
-      { selectedPlan: body.selectedPlan },
+      { selectedPlan: body.selectedPlan, status: 'PLAN_SELECTED', onboardingStep: 6 },
       { new: true }
     );
 

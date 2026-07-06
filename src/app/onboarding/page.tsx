@@ -14,6 +14,10 @@ export default function OnboardingPage() {
   const [calorieProfile, setCalorieProfile] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -50,6 +54,27 @@ export default function OnboardingPage() {
 
             if (data.onboardingStep) {
               setStep(data.onboardingStep);
+            }
+
+            // If user is at Step 5 or 6, they need the `plans` array loaded to view them!
+            if (data.onboardingStep >= 5 && data.planDuration && data.planFrequency && data.mealSlots) {
+              try {
+                const plansRes = await fetch('/api/onboarding/plans', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    duration: data.planDuration, 
+                    frequency: data.planFrequency,
+                    mealSlots: data.mealSlots 
+                  })
+                });
+                const plansData = await plansRes.json();
+                if (plansData.success && plansData.plans) {
+                  setPlans(plansData.plans);
+                }
+              } catch (err) {
+                console.error("Failed to load plans on mount", err);
+              }
             }
           }
         }
@@ -135,13 +160,64 @@ export default function OnboardingPage() {
 
   const handleContinueToStep5 = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoadingPlans(true);
     setStep(5);
-    // Save filter choices
-    fetch('/api/onboarding/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...formData, onboardingStep: 5 })
-    }).catch(console.error);
+    
+    try {
+      // Save filter choices
+      await fetch('/api/onboarding/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, onboardingStep: 5 })
+      });
+      
+      // Fetch dynamic plans
+      const res = await fetch('/api/onboarding/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          duration: formData.planDuration, 
+          frequency: formData.planFrequency,
+          mealSlots: formData.mealSlots 
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.plans) {
+        setPlans(data.plans);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  const handleConnectRequest = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/onboarding/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: formData.phone,
+          name: formData.name,
+          filters: {
+            duration: formData.planDuration,
+            frequency: formData.planFrequency,
+            mealSlots: formData.mealSlots,
+            calorieTarget: calorieProfile?.total
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRequestSubmitted(true);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -164,33 +240,89 @@ export default function OnboardingPage() {
     }
   };
 
-  const getDynamicPrice = (basePrice: number) => {
-    if (!calorieProfile) return basePrice;
-    
-    // 1. Scale by Calories (Baseline 2000)
-    let scale = calorieProfile.total / 2000;
-    
-    // 2. Scale by Meal Slots (Assuming basePrice is for 1 meal per day)
-    const mealsMultiplier = Math.max(1, formData.mealSlots.length);
-    
-    // 3. Scale by Days (Assuming basePrice is for 5 days)
-    let daysMultiplier = 1;
-    if (formData.planFrequency === "6 DAYS") daysMultiplier = 1.2;
-    if (formData.planFrequency === "7 DAYS") daysMultiplier = 1.4;
-
-    return Math.round(basePrice * scale * mealsMultiplier * daysMultiplier);
-  };
-
   const getDynamicCalsPerMeal = () => {
-    if (!calorieProfile) return 400;
-    const meals = Math.max(1, formData.mealSlots.length);
-    return Math.round(calorieProfile.total / meals);
+    if (!calorieProfile || formData.mealSlots.length === 0) return 0;
+    return Math.round(calorieProfile.total / formData.mealSlots.length);
   };
 
-  const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat') => {
-    if (!calorieProfile) return 0;
-    const meals = Math.max(1, formData.mealSlots.length);
-    return Math.round(calorieProfile[macro] / meals);
+  const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat' | 'fiber') => {
+    if (!calorieProfile || formData.mealSlots.length === 0) return 0;
+    return Math.round(calorieProfile[macro] / formData.mealSlots.length);
+  };
+
+  const getDynamicBowlStats = (bowl: any) => {
+    const defaultStats = {
+      weight: bowl.baseWeight || 0,
+      calories: bowl.baseCalories || 0,
+      price: bowl.basePrice || 0,
+      macros: bowl.macros || { protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    };
+    if (!bowl.baseCalories || formData.mealSlots.length === 0) return defaultStats;
+    
+    const targetCals = getDynamicCalsPerMeal();
+    const scale = targetCals / bowl.baseCalories;
+    
+    return {
+      weight: Math.round(bowl.baseWeight * scale),
+      calories: Math.round(bowl.baseCalories * scale),
+      price: Math.round(bowl.basePrice * scale),
+      macros: {
+        protein: Math.round((bowl.macros?.protein || 0) * scale),
+        carbs: Math.round((bowl.macros?.carbs || 0) * scale),
+        fat: Math.round((bowl.macros?.fat || 0) * scale),
+        fiber: Math.round((bowl.macros?.fiber || 0) * scale),
+      }
+    };
+  };
+
+  const getPlanDynamicPrices = (plan: any) => {
+    if (!calorieProfile) {
+      return {
+        total: plan.totalPrice || 0,
+        discounted: plan.discountPrice || plan.totalPrice || 0
+      };
+    }
+    
+    let sumOfBowls = 0;
+    
+    plan.selections?.forEach((bucket: any) => {
+      let isSlotSelected = false;
+      if (bucket.type === 'B' && formData.mealSlots.includes('B-FAST')) isSlotSelected = true;
+      if (bucket.type === 'L' && formData.mealSlots.includes('LUNCH')) isSlotSelected = true;
+      if (bucket.type === 'D' && formData.mealSlots.includes('DINNER')) isSlotSelected = true;
+      
+      if (isSlotSelected && bucket.bowls) {
+        bucket.bowls.forEach((bowl: any) => {
+          const stats = getDynamicBowlStats(bowl);
+          sumOfBowls += stats.price;
+        });
+      }
+    });
+
+    const calculatedTotal = sumOfBowls;
+    let calculatedDiscount = calculatedTotal;
+
+    if (plan.totalPrice > 0 && plan.discountPrice > 0 && plan.discountPrice < plan.totalPrice) {
+      const discountRatio = plan.discountPrice / plan.totalPrice;
+      calculatedDiscount = Math.round(calculatedTotal * discountRatio);
+    }
+
+    if (calculatedTotal === 0) {
+      let scale = calorieProfile.total / 2000;
+      const mealsMultiplier = Math.max(1, formData.mealSlots.length);
+      let daysMultiplier = 5;
+      if (formData.planFrequency === "6 DAYS") daysMultiplier = 6;
+      if (formData.planFrequency === "7 DAYS") daysMultiplier = 7;
+      
+      const fallbackTotal = Math.round((plan.totalPrice || 0) * scale * mealsMultiplier * daysMultiplier);
+      const fallbackDiscount = Math.round((plan.discountPrice || plan.totalPrice || 0) * scale * mealsMultiplier * daysMultiplier);
+      return { total: fallbackTotal, discounted: fallbackDiscount };
+    }
+
+    return {
+      total: calculatedTotal,
+      discounted: calculatedDiscount
+    };
   };
 
   const commonAllergies = ["Peanuts", "Dairy", "Shellfish", "Tree Nuts", "Eggs", "Soy", "Wheat"];
@@ -652,17 +784,17 @@ export default function OnboardingPage() {
                           const fStroke = fPct * circ;
                           const fiStroke = fiPct * circ;
                           
-                          let currentOffset = circ;
-                          const pOffset = currentOffset;
-                          currentOffset -= pStroke;
+                          let currentOffset = 0;
+                          const pOffset = -currentOffset;
+                          currentOffset += pStroke;
                           
-                          const cOffset = currentOffset;
-                          currentOffset -= cStroke;
+                          const cOffset = -currentOffset;
+                          currentOffset += cStroke;
                           
-                          const fOffset = currentOffset;
-                          currentOffset -= fStroke;
+                          const fOffset = -currentOffset;
+                          currentOffset += fStroke;
                           
-                          const fiOffset = currentOffset;
+                          const fiOffset = -currentOffset;
 
                           return (
                             <>
@@ -854,205 +986,501 @@ export default function OnboardingPage() {
             <div className={`transition-all duration-500 ${step === 5 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
               <div className="max-w-4xl mx-auto">
                 <h2 className="text-3xl font-bold text-white tracking-tight mb-2 text-center">
-                  Select Your Tier
+                  {selectedPlan ? "Selected Tier" : "Select Your Tier"}
                 </h2>
                 <p className="text-[#E6D0BA]/80 text-sm md:text-base font-serif italic text-center mb-12">
                   Pricing adjusted for your {calorieProfile?.total} kcal target.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                  {/* CORE PLAN */}
-                  <div className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === 'Core' ? 'border-[#4CAF50] scale-[1.02] shadow-[0_0_30px_rgba(76,175,80,0.2)]' : 'border-transparent'} bg-[#4CAF50]`}>
-                    {selectedPlan === 'Core' && (
-                      <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        <Check className="w-4 h-4 text-[#4CAF50]" strokeWidth={3} />
-                      </div>
-                    )}
-                    <h3 className="text-4xl font-bold text-white mb-2">Core</h3>
-                    <p className="text-white/90 text-sm mb-8">Balanced everyday nutrition</p>
-                    
-                    <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
-                      <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
-                      <h4 className="text-5xl font-bold text-white text-center mb-6">
-                        {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
-                      </h4>
-                      
-                      <div className="grid grid-cols-4 gap-2 mb-6">
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Protein</p>
-                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('protein')}g</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
-                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('carbs')}g</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
-                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
-                          <p className="font-bold text-gray-900">8g</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-white/90 text-center italic font-serif">
-                        Rich in iron and calcium, supports blood flow and strong bones
+                <div className="flex justify-center mb-12">
+                  {isLoadingPlans ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 border-4 border-tertiary/30 border-t-tertiary rounded-full animate-spin mb-4" />
+                      <p className="text-gray-400">Finding the perfect plans for you...</p>
+                    </div>
+                  ) : plans.length === 0 ? (
+                    <div className="bg-[#151515] rounded-3xl p-8 border border-gray-800/60 text-center max-w-2xl w-full">
+                      <h3 className="text-2xl font-bold text-white mb-4">No Exact Match Found</h3>
+                      <p className="text-gray-400 mb-8 leading-relaxed">
+                        We currently don't have a pre-built plan matching your exact combination of {formData.planDuration}, {formData.planFrequency}, and {formData.mealSlots.length} meals/day.
                       </p>
-                    </div>
-
-                    <div className="flex items-end gap-3 mb-6">
-                      <span className="text-5xl font-bold text-white">₹{getDynamicPrice(1799)}</span>
-                      <span className="text-lg text-white/60 line-through mb-1">₹{getDynamicPrice(1900)}</span>
-                    </div>
-                    
-                    <p className="text-sm text-white font-mono mb-8">you saved ₹125 on this order</p>
-                    
-                    <button 
-                      onClick={() => setSelectedPlan('Core')}
-                      className="w-full bg-[#FFD700] hover:bg-white text-black py-4 rounded-xl font-bold text-lg transition-colors"
-                    >
-                      {selectedPlan === 'Core' ? 'Selected' : 'Choose Core'}
-                    </button>
-                  </div>
-
-                  {/* PRO PLAN */}
-                  <div className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === 'Pro' ? 'border-[#8A3FD1] scale-[1.02] shadow-[0_0_30px_rgba(138,63,209,0.2)]' : 'border-transparent'} bg-[#8A3FD1]`}>
-                    <div className="absolute top-0 right-12 bg-[#FFD700] text-black text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-b-lg uppercase">
-                      Most Nutrient Dense
-                    </div>
-                    {selectedPlan === 'Pro' && (
-                      <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        <Check className="w-4 h-4 text-[#8A3FD1]" strokeWidth={3} />
-                      </div>
-                    )}
-                    <h3 className="text-4xl font-bold text-white mb-2 mt-4">Pro</h3>
-                    <p className="text-white/90 text-sm mb-8">Nutrient dense, chef curated</p>
-                    
-                    <div className="bg-white/10 rounded-2xl p-6 mb-8 backdrop-blur-sm">
-                      <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
-                      <h4 className="text-5xl font-bold text-white text-center mb-6">
-                        {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
-                      </h4>
-                      
-                      <div className="grid grid-cols-4 gap-2 mb-6">
-                        <div className="bg-[#FFD700] rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-yellow-900 uppercase">Protein</p>
-                          <p className="font-bold text-yellow-950">{Math.round(getDynamicMacroPerMeal('protein') * 1.2)}g</p>
+                      {requestSubmitted ? (
+                        <div className="bg-[#4CAF50]/10 text-[#4CAF50] p-4 rounded-xl border border-[#4CAF50]/30 font-bold flex items-center justify-center gap-2">
+                          <Check className="w-5 h-5" />
+                          Request sent! Our team will contact you shortly.
                         </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
-                          <p className="font-bold text-gray-900">{Math.round(getDynamicMacroPerMeal('carbs') * 0.9)}g</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
-                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-2 text-center">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
-                          <p className="font-bold text-gray-900">10g</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-white/90 text-center italic font-serif">
-                        Rich in zinc, B12 and iron, supports immunity, energy and blood flow
-                      </p>
+                      ) : (
+                        <button 
+                          onClick={handleConnectRequest}
+                          disabled={isSubmitting}
+                          className="bg-tertiary text-white px-8 py-4 rounded-xl font-bold hover:bg-[#EA580C] transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                        >
+                          {isSubmitting ? "Submitting..." : "Send Connect Request"}
+                        </button>
+                      )}
                     </div>
+                  ) : (
+                    <div className="w-full">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                        {plans.map((plan) => {
+                          const isCore = plan.category === "Core";
+                          const bgColor = isCore ? "bg-[#4CAF50]" : "bg-[#8A3FD1]";
+                          const activeBorder = isCore ? "border-[#4CAF50] shadow-[0_0_30px_rgba(76,175,80,0.2)]" : "border-[#8A3FD1] shadow-[0_0_30px_rgba(138,63,209,0.2)]";
+                          const textColor = isCore ? "text-gray-900" : "text-yellow-950";
+                          const labelColor = isCore ? "text-gray-500" : "text-yellow-900";
+                          const boxColor = isCore ? "bg-white" : "bg-[#FFD700]";
 
-                    <div className="flex items-end gap-3 mb-6">
-                      <span className="text-5xl font-bold text-white">₹{getDynamicPrice(2499)}</span>
-                      <span className="text-lg text-white/60 line-through mb-1">₹{getDynamicPrice(2800)}</span>
-                    </div>
-                    
-                    <p className="text-sm text-white font-mono mb-8">billed {formData.planDuration.toLowerCase()}</p>
-                    
-                    <button 
-                      onClick={() => setSelectedPlan('Pro')}
-                      className="w-full bg-[#FFD700] hover:bg-white text-black py-4 rounded-xl font-bold text-lg transition-colors"
-                    >
-                      {selectedPlan === 'Pro' ? 'Selected' : 'Choose Pro'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-center mt-12 mb-20">
-                  <button 
-                    onClick={handleCheckout}
-                    disabled={!selectedPlan || isSubmitting}
-                    className="w-full max-w-sm bg-white text-black py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Checkout
-                        <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Sample Bowls Grid based on Meal Slots */}
-                {selectedPlan && (
-                  <div className="border-t border-gray-800/50 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <h3 className="text-2xl font-bold text-white mb-8 text-center">
-                      Sample {selectedPlan} Bowls for You
-                    </h3>
-                    
-                    <div className="space-y-12">
-                      {formData.mealSlots.map(slot => (
-                        <div key={slot}>
-                          <div className="flex items-center gap-3 mb-6">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              slot === 'B-FAST' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6]' : 
-                              slot === 'LUNCH' ? 'bg-[#10B981]/20 text-[#10B981]' : 
-                              'bg-[#F97316]/20 text-[#F97316]'
-                            }`}>
-                              {slot === 'B-FAST' && <Sun className="w-4 h-4" />}
-                              {slot === 'LUNCH' && <Utensils className="w-4 h-4" />}
-                              {slot === 'DINNER' && <Moon className="w-4 h-4" />}
-                            </div>
-                            <h4 className="text-xl font-bold text-white tracking-wide">{slot}</h4>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {[1, 2, 3].map(i => (
-                              <div key={i} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 hover:border-gray-600 transition-colors">
-                                <div className="w-full h-32 bg-[#222] rounded-xl mb-4" />
-                                <div className="flex justify-between items-start mb-2">
-                                  <h5 className="font-bold text-gray-200">Sample Bowl {i}</h5>
-                                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-400">
-                                    ~{Math.round(calorieProfile?.total / (formData.mealSlots.length * 3))} kcal
-                                  </span>
+                          return (
+                            <div 
+                              key={plan._id} 
+                              onClick={() => setSelectedPlan(plan._id)}
+                              className={`relative cursor-pointer rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === plan._id ? `${activeBorder} scale-[1.02]` : 'border-transparent'} ${bgColor}`}
+                            >
+                              {selectedPlan === plan._id && (
+                                <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                                  <Check className={`w-4 h-4 ${isCore ? "text-[#4CAF50]" : "text-[#8A3FD1]"}`} strokeWidth={3} />
                                 </div>
-                                <p className="text-xs text-gray-500 line-clamp-2">Chef prepared high-quality ingredients specifically calibrated for your goal.</p>
+                              )}
+                              {!isCore && (
+                                <div className="absolute top-0 right-12 bg-[#FFD700] text-black text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-b-lg uppercase">
+                                  Most Nutrient Dense
+                                </div>
+                              )}
+                              <h3 className="text-4xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
+                              <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration}</p>
+                              
+                              <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
+                                <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
+                                <h4 className="text-5xl font-bold text-white text-center mb-6">
+                                  {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
+                                </h4>
+                                
+                                <div className="grid grid-cols-4 gap-2 mb-6">
+                                  <div className={`${boxColor} rounded-xl p-2 text-center`}>
+                                    <p className={`text-[10px] font-bold uppercase ${labelColor}`}>Protein</p>
+                                    <p className={`font-bold ${textColor}`}>
+                                      {isCore ? getDynamicMacroPerMeal('protein') : Math.round(getDynamicMacroPerMeal('protein') * 1.2)}g
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-xl p-2 text-center">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
+                                    <p className="font-bold text-gray-900">
+                                      {isCore ? getDynamicMacroPerMeal('carbs') : Math.round(getDynamicMacroPerMeal('carbs') * 0.9)}g
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-xl p-2 text-center">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
+                                    <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
+                                  </div>
+                                  <div className="bg-white rounded-xl p-2 text-center">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
+                                    <p className="font-bold text-gray-900">10g</p>
+                                  </div>
+                                </div>
                               </div>
-                            ))}
+
+                              {(() => {
+                                const prices = getPlanDynamicPrices(plan);
+                                return (
+                                  <div className="flex items-end gap-3 mb-6">
+                                    <span className="text-5xl font-bold text-white">₹{prices.discounted}</span>
+                                    {(plan.totalPrice > (plan.discountPrice || 0) && plan.discountPrice > 0) && (
+                                      <span className="text-lg text-white/60 line-through mb-1">₹{prices.total}</span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              
+                              <button 
+                                onClick={() => setSelectedPlan(plan._id)}
+                                className="w-full bg-[#FFD700] hover:bg-white text-black py-4 rounded-xl font-bold text-lg transition-colors"
+                              >
+                                {selectedPlan === plan._id ? 'Selected' : `Choose ${plan.name}`}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex justify-center mt-12 mb-20">
+                        <button 
+                          onClick={handleCheckout}
+                          disabled={!selectedPlan || isSubmitting}
+                          className="w-full max-w-sm bg-white text-black py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSubmitting ? (
+                            <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              Checkout
+                              <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Sample Bowls Grid based on selected plan */}
+                      {selectedPlan && plans.find(p => p._id === selectedPlan) && (
+                        <div className="border-t border-gray-800/50 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <h3 className="text-2xl font-bold text-white mb-8 text-center">
+                            Sample {plans.find(p => p._id === selectedPlan)?.name} Bowls for You
+                          </h3>
+                          
+                          <div className="space-y-12">
+                            {formData.mealSlots.map(slot => {
+                              const plan = plans.find(p => p._id === selectedPlan);
+                              
+                              let typeCode = slot;
+                              if (slot === 'B-FAST') typeCode = 'B';
+                              if (slot === 'LUNCH') typeCode = 'L';
+                              if (slot === 'DINNER') typeCode = 'D';
+
+                              const selection = plan?.selections.find((s: any) => s.type === typeCode);
+                              const bowls = selection ? selection.bowls : [];
+
+                              return (
+                                <div key={slot}>
+                                  <div className="flex items-center gap-3 mb-6">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      slot === 'B-FAST' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6]' : 
+                                      slot === 'LUNCH' ? 'bg-[#10B981]/20 text-[#10B981]' : 
+                                      'bg-[#F97316]/20 text-[#F97316]'
+                                    }`}>
+                                      {slot === 'B-FAST' && <Sun className="w-4 h-4" />}
+                                      {slot === 'LUNCH' && <Utensils className="w-4 h-4" />}
+                                      {slot === 'DINNER' && <Moon className="w-4 h-4" />}
+                                    </div>
+                                    <h4 className="text-xl font-bold text-white tracking-wide">{slot}</h4>
+                                  </div>
+                                  
+                                  {bowls.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                      {bowls.map((bowl: any) => (
+                                        <div key={bowl._id} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 hover:border-gray-600 transition-colors">
+                                          <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden">
+                                            {/* Ideally this would be an image, but we'll leave a placeholder for now */}
+                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                              <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
+                                            </div>
+                                          </div>
+                                          
+                                          {(() => {
+                                            const stats = getDynamicBowlStats(bowl);
+                                            return (
+                                              <>
+                                                <div className="flex justify-between items-start mb-3">
+                                                  <h5 className="font-bold text-gray-200 pr-2 leading-tight">{bowl.name}</h5>
+                                                  <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">₹{stats.price}</span>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 mb-3">
+                                                  <span className="text-[10px] font-bold text-black bg-[#FFD700] px-2 py-1 rounded">{stats.calories} kcal</span>
+                                                  <span className="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-1 rounded">{stats.weight}g</span>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-1 mb-3">
+                                                  <div className="bg-[#222] p-1.5 rounded text-center">
+                                                    <p className="text-[8px] text-gray-500 uppercase">Pro</p>
+                                                    <p className="text-[10px] font-bold text-white">{stats.macros.protein}g</p>
+                                                  </div>
+                                                  <div className="bg-[#222] p-1.5 rounded text-center">
+                                                    <p className="text-[8px] text-gray-500 uppercase">Carb</p>
+                                                    <p className="text-[10px] font-bold text-white">{stats.macros.carbs}g</p>
+                                                  </div>
+                                                  <div className="bg-[#222] p-1.5 rounded text-center">
+                                                    <p className="text-[8px] text-gray-500 uppercase">Fat</p>
+                                                    <p className="text-[10px] font-bold text-white">{stats.macros.fat}g</p>
+                                                  </div>
+                                                  <div className="bg-[#222] p-1.5 rounded text-center">
+                                                    <p className="text-[8px] text-gray-500 uppercase">Fib</p>
+                                                    <p className="text-[10px] font-bold text-white">{stats.macros.fiber}g</p>
+                                                  </div>
+                                                </div>
+                                                <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                              </>
+                                            );
+                                          })()}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-gray-500 text-sm italic">No bowls available for this slot in the selected plan.</p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
             
             {/* -------------------- STEP 6 (Success) -------------------- */}
             <div className={`transition-all duration-500 ${step === 6 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
-              <div className="max-w-md mx-auto text-center py-20">
-                <div className="w-24 h-24 bg-tertiary/20 rounded-full flex items-center justify-center mx-auto mb-8">
-                  <Check className="w-12 h-12 text-tertiary" strokeWidth={3} />
+              <div className="max-w-3xl mx-auto py-12">
+                <div className="text-center mb-16">
+                  <div className="w-20 h-20 bg-tertiary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Check className="w-10 h-10 text-tertiary" strokeWidth={3} />
+                  </div>
+                  <h2 className="text-4xl font-bold text-white tracking-tight mb-4 font-headline">
+                    Order Received!
+                  </h2>
+                  <p className="text-gray-400 text-lg">
+                    Your personalised plan has been locked in. We will connect with you shortly.
+                  </p>
                 </div>
-                <h2 className="text-4xl font-bold text-white tracking-tight mb-4 font-headline">
-                  Congratulations!
-                </h2>
-                <p className="text-gray-400 text-lg leading-relaxed mb-12">
-                  Your personalised {selectedPlan} plan has been locked in.<br/>
-                  We will connect with you shortly.
-                </p>
-                <Link href="/menu" className="inline-block bg-[#222] hover:bg-[#333] text-white px-8 py-4 rounded-xl font-bold transition-colors">
-                  Go to Dashboard
-                </Link>
+
+                {/* Calorie Profile Summary */}
+                {calorieProfile && (
+                  <div className="mb-16">
+                    <h3 className="text-2xl font-bold text-white mb-8 text-center font-headline">Your Calorie Profile</h3>
+                    <div className="flex flex-col items-center">
+                      <div className="relative w-64 h-64 mb-12">
+                        <svg viewBox="0 0 300 300" className="w-full h-full transform -rotate-90">
+                          {(() => {
+                            const { protein, carbs, fat, fiber } = calorieProfile;
+                            const total = protein + carbs + fat + fiber;
+                            const circ = 2 * Math.PI * 120; // r=120
+                            
+                            const pPct = protein / total;
+                            const cPct = carbs / total;
+                            const fPct = fat / total;
+                            const fiPct = fiber / total;
+                            
+                            const pStroke = pPct * circ;
+                            const cStroke = cPct * circ;
+                            const fStroke = fPct * circ;
+                            const fiStroke = fiPct * circ;
+                            
+                            let currentOffset = 0;
+                            const pOffset = -currentOffset;
+                            currentOffset += pStroke;
+                            
+                            const cOffset = -currentOffset;
+                            currentOffset += cStroke;
+                            
+                            const fOffset = -currentOffset;
+                            currentOffset += fStroke;
+                            
+                            const fiOffset = -currentOffset;
+
+                            return (
+                              <>
+                                <circle cx="150" cy="150" r="120" fill="none" stroke="#222" strokeWidth="20" />
+                                <circle cx="150" cy="150" r="120" fill="none" stroke="#8B5CF6" strokeWidth="20" 
+                                  strokeDasharray={`${pStroke} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
+                                <circle cx="150" cy="150" r="120" fill="none" stroke="#F97316" strokeWidth="20" 
+                                  strokeDasharray={`${cStroke} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out" />
+                                <circle cx="150" cy="150" r="120" fill="none" stroke="#10B981" strokeWidth="20" 
+                                  strokeDasharray={`${fStroke} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out" />
+                                <circle cx="150" cy="150" r="120" fill="none" stroke="#FFB084" strokeWidth="20" 
+                                  strokeDasharray={`${fiStroke} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out" />
+                              </>
+                            );
+                          })()}
+                        </svg>
+                        
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-4xl font-bold text-white font-mono tracking-tight">
+                            {calorieProfile.total.toLocaleString()}
+                          </span>
+                          <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">KCAL</span>
+                        </div>
+                      </div>
+
+                      <div className="w-full max-w-md grid grid-cols-2 bg-[#151515] rounded-2xl border border-gray-800/60 overflow-hidden">
+                        <div className="p-6 border-b border-r border-gray-800/60">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
+                            <span className="text-sm text-gray-300">Protein</span>
+                          </div>
+                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.protein}g</div>
+                        </div>
+                        <div className="p-6 border-b border-gray-800/60">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#F97316]" />
+                            <span className="text-sm text-gray-300">Carbs</span>
+                          </div>
+                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.carbs}g</div>
+                        </div>
+                        <div className="p-6 border-r border-gray-800/60">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                            <span className="text-sm text-gray-300">Fat</span>
+                          </div>
+                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.fat}g</div>
+                        </div>
+                        <div className="p-6">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#FFB084]" />
+                            <span className="text-sm text-gray-300">Fiber</span>
+                          </div>
+                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.fiber}g</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Plan Summary */}
+                {selectedPlan && (
+                  <div className="mb-16">
+                    <h3 className="text-2xl font-bold text-white mb-8 text-center font-headline">Your Selected Plan</h3>
+                    <div className="max-w-md mx-auto">
+                      {plans.filter(p => p._id === selectedPlan).map((plan) => {
+                        const isCore = plan.category === "Core";
+                        const bgColor = isCore ? "bg-[#4CAF50]" : "bg-[#8A3FD1]";
+                        const textColor = isCore ? "text-gray-900" : "text-yellow-950";
+                        const labelColor = isCore ? "text-gray-500" : "text-yellow-900";
+                        const boxColor = isCore ? "bg-white" : "bg-[#FFD700]";
+
+                        return (
+                          <div key={plan._id} className={`relative rounded-3xl p-8 border-2 border-transparent ${bgColor}`}>
+                            <h3 className="text-4xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
+                            <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration}</p>
+                            
+                            <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
+                              <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
+                              <h4 className="text-5xl font-bold text-white text-center mb-6">
+                                {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
+                              </h4>
+                              
+                              <div className="grid grid-cols-4 gap-2 mb-6">
+                                <div className={`${boxColor} rounded-xl p-2 text-center`}>
+                                  <p className={`text-[10px] font-bold uppercase ${labelColor}`}>Protein</p>
+                                  <p className={`font-bold ${textColor}`}>
+                                    {isCore ? getDynamicMacroPerMeal('protein') : Math.round(getDynamicMacroPerMeal('protein') * 1.2)}g
+                                  </p>
+                                </div>
+                                <div className="bg-white rounded-xl p-2 text-center">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
+                                  <p className="font-bold text-gray-900">
+                                    {isCore ? getDynamicMacroPerMeal('carbs') : Math.round(getDynamicMacroPerMeal('carbs') * 0.9)}g
+                                  </p>
+                                </div>
+                                <div className="bg-white rounded-xl p-2 text-center">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
+                                  <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
+                                </div>
+                                <div className="bg-white rounded-xl p-2 text-center">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
+                                  <p className="font-bold text-gray-900">10g</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {(() => {
+                              const prices = getPlanDynamicPrices(plan);
+                              return (
+                                <div className="flex items-end gap-3">
+                                  <span className="text-5xl font-bold text-white">₹{prices.discounted}</span>
+                                  {(plan.totalPrice > (plan.discountPrice || 0) && plan.discountPrice > 0) && (
+                                    <span className="text-lg text-white/60 line-through mb-1">₹{prices.total}</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bowls Summary */}
+                {selectedPlan && (
+                  <div className="mb-12">
+                    <h3 className="text-2xl font-bold text-white mb-8 text-center font-headline">Your Bowls</h3>
+                    <div className="space-y-12">
+                      {formData.mealSlots.map(slot => {
+                        const plan = plans.find(p => p._id === selectedPlan);
+                        
+                        let typeCode = slot;
+                        if (slot === 'B-FAST') typeCode = 'B';
+                        if (slot === 'LUNCH') typeCode = 'L';
+                        if (slot === 'DINNER') typeCode = 'D';
+
+                        const selection = plan?.selections.find((s: any) => s.type === typeCode);
+                        const bowls = selection ? selection.bowls : [];
+
+                        return (
+                          <div key={slot}>
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                slot === 'B-FAST' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6]' : 
+                                slot === 'LUNCH' ? 'bg-[#10B981]/20 text-[#10B981]' : 
+                                'bg-[#F97316]/20 text-[#F97316]'
+                              }`}>
+                                {slot === 'B-FAST' && <Sun className="w-4 h-4" />}
+                                {slot === 'LUNCH' && <Utensils className="w-4 h-4" />}
+                                {slot === 'DINNER' && <Moon className="w-4 h-4" />}
+                              </div>
+                              <h4 className="text-xl font-bold text-white tracking-wide">{slot}</h4>
+                            </div>
+                            
+                            {bowls.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {bowls.map((bowl: any) => (
+                                  <div key={bowl._id} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 transition-colors">
+                                    <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden">
+                                      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                        <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
+                                      </div>
+                                    </div>
+                                    {(() => {
+                                      const stats = getDynamicBowlStats(bowl);
+                                      return (
+                                        <>
+                                          <div className="flex justify-between items-start mb-3">
+                                            <h5 className="font-bold text-gray-200 pr-2 leading-tight">{bowl.name}</h5>
+                                            <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">₹{stats.price}</span>
+                                          </div>
+                                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                                            <span className="text-[10px] font-bold text-black bg-[#FFD700] px-2 py-1 rounded">{stats.calories} kcal</span>
+                                            <span className="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-1 rounded">{stats.weight}g</span>
+                                          </div>
+                                          <div className="grid grid-cols-4 gap-1 mb-3">
+                                            <div className="bg-[#222] p-1.5 rounded text-center">
+                                              <p className="text-[8px] text-gray-500 uppercase">Pro</p>
+                                              <p className="text-[10px] font-bold text-white">{stats.macros.protein}g</p>
+                                            </div>
+                                            <div className="bg-[#222] p-1.5 rounded text-center">
+                                              <p className="text-[8px] text-gray-500 uppercase">Carb</p>
+                                              <p className="text-[10px] font-bold text-white">{stats.macros.carbs}g</p>
+                                            </div>
+                                            <div className="bg-[#222] p-1.5 rounded text-center">
+                                              <p className="text-[8px] text-gray-500 uppercase">Fat</p>
+                                              <p className="text-[10px] font-bold text-white">{stats.macros.fat}g</p>
+                                            </div>
+                                            <div className="bg-[#222] p-1.5 rounded text-center">
+                                              <p className="text-[8px] text-gray-500 uppercase">Fib</p>
+                                              <p className="text-[10px] font-bold text-white">{stats.macros.fiber}g</p>
+                                            </div>
+                                          </div>
+                                          <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 text-sm italic">No bowls available for this slot in the selected plan.</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-center mt-16 pt-8 border-t border-gray-800">
+                  <Link href="/menu" className="inline-flex items-center gap-2 bg-[#FFD700] hover:bg-white text-black px-12 py-4 rounded-xl font-bold transition-colors">
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
+                  </Link>
+                </div>
               </div>
             </div>
 
