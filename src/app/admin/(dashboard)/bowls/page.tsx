@@ -220,6 +220,7 @@ export default function BowlsPage() {
             <option value="All">All Categories</option>
             <option value="Core">Core</option>
             <option value="Pro">Pro</option>
+            <option value="Performance">Performance</option>
           </select>
         </div>
         <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
@@ -548,6 +549,7 @@ export default function BowlsPage() {
                     <select value={newBowl.category} onChange={e => setNewBowl({...newBowl, category: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer">
                       <option value="Core">Core</option>
                       <option value="Pro">Pro</option>
+                      <option value="Performance">Performance</option>
                     </select>
                   </div>
                   <div>

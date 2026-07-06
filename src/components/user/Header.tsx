@@ -9,7 +9,7 @@ export default function Header() {
       yOffset={-40} 
       duration={1} 
       trigger="mount"
-      className="fixed top-4 md:top-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto md:right-auto z-50 flex justify-center"
+      className="fixed top-4 md:top-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-auto md:right-auto z-40 flex justify-center"
     >
       <header className="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 w-full md:min-w-[800px] bg-white/80 backdrop-blur-xl border border-white/50 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all">
         {/* Mobile Hamburger */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 
 interface BowlModalProps {
@@ -10,6 +11,11 @@ interface BowlModalProps {
 
 export default function BowlModal({ bowl, onClose }: BowlModalProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (bowl) {
@@ -25,10 +31,10 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
     };
   }, [bowl]);
 
-  if (!bowl) return null;
+  if (!bowl || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 pointer-events-none">
+  return createPortal(
+    <div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-6 pointer-events-none" style={{ zIndex: 60 }}>
       {/* Backdrop */}
       <div 
         className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm pointer-events-auto transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
@@ -76,19 +82,19 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
             <div className="grid grid-cols-4 gap-3 w-full mb-10">
               <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protein</span>
-                <span className="font-bold text-gray-900">{bowl.macros.protein}g</span>
+                <span className="font-bold text-gray-900">{bowl.macros?.protein || 0}g</span>
               </div>
               <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Carbs</span>
-                <span className="font-bold text-gray-900">{bowl.macros.carbs}g</span>
+                <span className="font-bold text-gray-900">{bowl.macros?.carbs || 0}g</span>
               </div>
               <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fats</span>
-                <span className="font-bold text-gray-900">{bowl.macros.fats}g</span>
+                <span className="font-bold text-gray-900">{bowl.macros?.fat || 0}g</span>
               </div>
               <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fiber</span>
-                <span className="font-bold text-gray-900">9g</span> {/* Placeholder for fiber */}
+                <span className="font-bold text-gray-900">{bowl.macros?.fiber || 0}g</span> {/* Placeholder for fiber */}
               </div>
             </div>
 
@@ -124,6 +130,7 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

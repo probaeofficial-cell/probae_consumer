@@ -7,14 +7,15 @@ export async function POST(request: Request) {
     await connectToDatabase();
     
     const body = await request.json();
-    const { name, duration, days, mealCombinations, allowedBowls } = body;
+    const { name, category, duration, days, mealCombinations, allowedBowls } = body;
 
-    if (!name || !duration || !days || !mealCombinations || !allowedBowls) {
+    if (!name || !category || !duration || !days || !mealCombinations || !allowedBowls) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const newTier = await PlanTier.create({
       name,
+      category,
       duration,
       days: Number(days),
       mealCombinations,

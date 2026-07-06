@@ -8,6 +8,7 @@ import Alert from "@/components/ui/Alert";
 interface PlanTier {
   _id: string;
   name: string;
+  category: string;
   duration: string;
   days: number;
   mealCombinations: string[];
@@ -38,6 +39,7 @@ export default function TiersPage() {
   // Form state
   const [newTier, setNewTier] = useState({
     name: "",
+    category: "Core",
     duration: "weekly",
     days: 5,
     mealCombinations: [] as string[],
@@ -179,7 +181,7 @@ export default function TiersPage() {
         showAlert('success', `Plan Tier ${editingTierId ? "updated" : "created"} successfully!`);
         setIsDrawerOpen(false);
         setEditingTierId(null);
-        setNewTier({ name: "", duration: "weekly", days: 5, mealCombinations: [] });
+        setNewTier({ name: "", category: "Core", duration: "weekly", days: 5, mealCombinations: [] });
         setSelectedBowlIds([]);
         fetchTiers();
         
@@ -222,7 +224,7 @@ export default function TiersPage() {
         
         <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
           setEditingTierId(null);
-          setNewTier({ name: "", duration: "weekly", days: 5, mealCombinations: [] });
+          setNewTier({ name: "", category: "Core", duration: "weekly", days: 5, mealCombinations: [] });
           setSelectedBowlIds([]);
           setIsDrawerOpen(true);
         }}>
@@ -237,9 +239,10 @@ export default function TiersPage() {
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-100 bg-white text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0 sticky top-0 z-10 backdrop-blur-md bg-white/80">
             <div className="col-span-3">Tier Name</div>
+            <div className="col-span-2">Category</div>
             <div className="col-span-2">Duration</div>
-            <div className="col-span-2">Days</div>
-            <div className="col-span-3">Meal Combos</div>
+            <div className="col-span-1">Days</div>
+            <div className="col-span-2">Meal Combos</div>
             <div className="col-span-2 text-right">Allowed Bowls</div>
           </div>
 
@@ -252,7 +255,8 @@ export default function TiersPage() {
                   <div className="col-span-3"><div className="h-4 bg-gray-100 rounded w-3/4"></div></div>
                   <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
                   <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
-                  <div className="col-span-3"><div className="h-4 bg-gray-100 rounded w-3/4"></div></div>
+                  <div className="col-span-1"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
+                  <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-3/4"></div></div>
                   <div className="col-span-2 flex justify-end"><div className="h-6 bg-gray-100 rounded-full w-12"></div></div>
                 </div>
               ))
@@ -269,12 +273,17 @@ export default function TiersPage() {
                 >
                   <div className="col-span-3 font-semibold text-gray-900">{tier.name}</div>
                   <div className="col-span-2">
+                    <span className="px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm">
+                      {tier.category}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
                     <span className="px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 capitalize shadow-sm">
                       {tier.duration}
                     </span>
                   </div>
-                  <div className="col-span-2 text-sm text-gray-500 font-medium">{tier.days} Days</div>
-                  <div className="col-span-3">
+                  <div className="col-span-1 text-sm text-gray-500 font-medium">{tier.days} Days</div>
+                  <div className="col-span-2">
                     <div className="flex flex-wrap gap-1">
                       {tier.mealCombinations.map((combo, idx) => (
                         <span key={idx} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-600">
@@ -335,6 +344,15 @@ export default function TiersPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Tier Name</label>
               <input required type="text" value={newTier.name} onChange={e => setNewTier({...newTier, name: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="E.g. Basic Weekly Plan" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+              <select value={newTier.category} onChange={e => setNewTier({...newTier, category: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer">
+                <option value="Core">Core</option>
+                <option value="Pro">Pro</option>
+                <option value="Performance">Performance</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -501,7 +519,12 @@ export default function TiersPage() {
             
             <div className="flex-1 overflow-y-auto p-6 md:px-8 bg-gray-50/50">
               <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedTier.name}</h3>
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900">{selectedTier.name}</h3>
+                  <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-sm font-semibold">
+                    {selectedTier.category}
+                  </span>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-y-4 mb-6">
                   <div>
@@ -560,6 +583,7 @@ export default function TiersPage() {
                   setEditingTierId(selectedTier._id);
                   setNewTier({
                     name: selectedTier.name,
+                    category: selectedTier.category || "Core",
                     duration: selectedTier.duration,
                     days: selectedTier.days,
                     mealCombinations: selectedTier.mealCombinations,

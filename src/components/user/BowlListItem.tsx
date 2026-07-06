@@ -40,13 +40,13 @@ export default function BowlListItem({ bowl, onClick }: BowlListItemProps) {
         {/* Tiny Macro Pills */}
         <div className="flex gap-2">
           <div className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-mono font-medium text-gray-500">
-            C: {bowl.macros.carbs}g
+            C: {bowl.macros?.carbs || 0}g
           </div>
           <div className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-mono font-medium text-gray-500">
-            P: {bowl.macros.protein}g
+            P: {bowl.macros?.protein || 0}g
           </div>
           <div className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-mono font-medium text-gray-500">
-            F: {bowl.macros.fats}g
+            F: {bowl.macros?.fat || 0}g
           </div>
         </div>
       </div>

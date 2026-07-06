@@ -92,15 +92,15 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
           <div className="grid grid-cols-2 gap-4 flex-1 content-start">
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Protein</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros.protein}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.protein || 0}g</span>
             </div>
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Carbs</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros.carbs}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.carbs || 0}g</span>
             </div>
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Fats</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros.fats || ""}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.fat || 0}g</span>
             </div>
             <div className="bg-gray-100 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-2">Cals</span>
