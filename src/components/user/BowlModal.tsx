@@ -1,0 +1,129 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+
+interface BowlModalProps {
+  bowl: any | null;
+  onClose: () => void;
+}
+
+export default function BowlModal({ bowl, onClose }: BowlModalProps) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (bowl) {
+      // Trigger slide up animation
+      requestAnimationFrame(() => setIsVisible(true));
+      document.body.style.overflow = "hidden";
+    } else {
+      setIsVisible(false);
+      document.body.style.overflow = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [bowl]);
+
+  if (!bowl) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 pointer-events-none">
+      {/* Backdrop */}
+      <div 
+        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm pointer-events-auto transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={onClose}
+      />
+
+      {/* Modal Drawer */}
+      <div 
+        className={`relative w-full max-w-md bg-white rounded-t-[40px] sm:rounded-[40px] h-[90vh] sm:h-auto sm:max-h-[90vh] flex flex-col pointer-events-auto transition-transform duration-500 shadow-2xl ${isVisible ? 'translate-y-0' : 'translate-y-full sm:translate-y-12 sm:opacity-0'}`}
+      >
+        {/* Drag Handle */}
+        <div className="w-full flex justify-center pt-4 pb-2 sm:hidden cursor-grab" onClick={onClose}>
+          <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar px-8 pb-32">
+          
+          {/* Image */}
+          <div className="relative w-64 h-64 mx-auto mt-4 mb-8">
+            <div className="absolute inset-0 bg-gray-900 rounded-full overflow-hidden shadow-2xl shadow-gray-200/50">
+              <Image 
+                src={bowl.imageId?.url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop"} 
+                alt={bowl.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="text-center flex flex-col items-center">
+            <div className="bg-gray-100 text-gray-600 text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-full uppercase mb-4">
+              {bowl.category} • {bowl.mealTypes?.[0] === 'B' ? 'BREAKFAST' : bowl.mealTypes?.[0] === 'L' ? 'LUNCH' : 'DINNER'}
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{bowl.name}</h2>
+            
+            <div className="flex items-baseline justify-center gap-1 mb-8 text-[#8B5CF6]">
+              <span className="text-5xl font-light tracking-tight">{bowl.baseCalories}</span>
+              <span className="font-mono text-sm font-medium">kcal</span>
+            </div>
+
+            {/* Macros Grid */}
+            <div className="grid grid-cols-4 gap-3 w-full mb-10">
+              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protein</span>
+                <span className="font-bold text-gray-900">{bowl.macros.protein}g</span>
+              </div>
+              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Carbs</span>
+                <span className="font-bold text-gray-900">{bowl.macros.carbs}g</span>
+              </div>
+              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fats</span>
+                <span className="font-bold text-gray-900">{bowl.macros.fats}g</span>
+              </div>
+              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fiber</span>
+                <span className="font-bold text-gray-900">9g</span> {/* Placeholder for fiber */}
+              </div>
+            </div>
+
+            {/* Core Components */}
+            <div className="w-full text-left">
+              <h3 className="font-bold text-gray-900 mb-4">Core Components</h3>
+              <div className="space-y-4 text-sm border-t border-gray-100 pt-4">
+                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <span className="text-gray-700">Organic Quinoa Base</span>
+                  <span className="font-mono text-gray-400">120g</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <span className="text-gray-700">Grilled Chicken Breast</span>
+                  <span className="font-mono text-gray-400">150g</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <span className="text-gray-700">Avocado</span>
+                  <span className="font-mono text-gray-400">50g</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <span className="text-gray-700">Mixed Greens</span>
+                  <span className="font-mono text-gray-400">80g</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pt-12">
+          <button className="w-full bg-[#F97316] text-white font-bold py-4 rounded-2xl shadow-lg hover:-translate-y-0.5 transition-transform">
+            Add to Cart - ${bowl.basePrice.toFixed(2)}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

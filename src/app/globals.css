@@ -19,12 +19,7 @@
   --font-headline: "Syne", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #111111; /* Dark Neutral */
-    --foreground: #ededed;
-  }
-}
+
 
 body {
   background: var(--background);
@@ -34,4 +29,48 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-headline);
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  /* Grid Background Pattern */
+  .bg-grid-pattern {
+    background-color: #F8F9FA;
+    background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
+                      linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: center center;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 10s linear infinite;
+  }
 }
