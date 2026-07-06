@@ -15,6 +15,7 @@ export interface IBowl extends Document {
     fiber: number;
   };
   micros: string[];
+  ingredients: string[];
   mealTypes: string[];
   isActive: boolean;
 }
@@ -26,7 +27,7 @@ const BowlSchema: Schema = new Schema({
   baseCalories: { type: Number, required: true },
   basePrice: { type: Number, required: true },
   baseWeight: { type: Number, required: true },
-  category: { type: String, required: true, enum: ["Core", "Pro"] },
+  category: { type: String, required: true, enum: ["Core", "Pro", "Performance"] },
   macros: {
     protein: { type: Number, required: true },
     carbs: { type: Number, required: true },
@@ -34,6 +35,7 @@ const BowlSchema: Schema = new Schema({
     fiber: { type: Number, required: true },
   },
   micros: [{ type: String, required: true }],
+  ingredients: [{ type: String, required: true }],
   mealTypes: { type: [String], required: true, default: ["B", "L", "D"] },
   isActive: { type: Boolean, default: true },
 });

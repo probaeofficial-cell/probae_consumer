@@ -26,6 +26,8 @@ export default async function LandingPage() {
     macros: bowl.macros,
     category: bowl.category,
     mealTypes: bowl.mealTypes,
+    micros: bowl.micros,
+    ingredients: bowl.ingredients,
     imageId: bowl.imageId ? { url: bowl.imageId.url } : undefined,
   }));
 

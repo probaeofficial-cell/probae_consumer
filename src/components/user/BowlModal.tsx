@@ -98,28 +98,33 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
               </div>
             </div>
 
-            {/* Core Components */}
-            <div className="w-full text-left">
-              <h3 className="font-bold text-gray-900 mb-4">Core Components</h3>
-              <div className="space-y-4 text-sm border-t border-gray-100 pt-4">
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-700">Organic Quinoa Base</span>
-                  <span className="font-mono text-gray-400">120g</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-700">Grilled Chicken Breast</span>
-                  <span className="font-mono text-gray-400">150g</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-700">Avocado</span>
-                  <span className="font-mono text-gray-400">50g</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-700">Mixed Greens</span>
-                  <span className="font-mono text-gray-400">80g</span>
+            {/* Ingredients */}
+            {bowl.ingredients && bowl.ingredients.length > 0 && (
+              <div className="w-full text-left mt-6">
+                <h3 className="font-bold text-gray-900 mb-4">Core Ingredients</h3>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                  {bowl.ingredients.map((ingredient: string, idx: number) => (
+                    <span key={idx} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700">
+                      {ingredient}
+                    </span>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
+            
+            {/* Micronutrients */}
+            {bowl.micros && bowl.micros.length > 0 && (
+              <div className="w-full text-left mt-6">
+                <h3 className="font-bold text-gray-900 mb-4">Micronutrients</h3>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                  {bowl.micros.map((micro: string, idx: number) => (
+                    <span key={idx} className="px-3 py-1.5 bg-[#10B981]/10 border border-[#10B981]/20 rounded-lg text-sm font-medium text-[#15803D]">
+                      {micro}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

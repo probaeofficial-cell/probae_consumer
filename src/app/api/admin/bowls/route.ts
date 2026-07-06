@@ -13,6 +13,11 @@ export async function POST(request: Request) {
     if (typeof body.micros === "string") {
       body.micros = body.micros.split(",").map((s: string) => s.trim()).filter(Boolean);
     }
+    
+    // Parse ingredients comma separated string
+    if (typeof body.ingredients === "string") {
+      body.ingredients = body.ingredients.split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
 
     if (!body.imageId || body.imageId === "") {
       delete body.imageId;

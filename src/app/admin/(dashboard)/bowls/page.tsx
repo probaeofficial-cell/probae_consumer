@@ -25,6 +25,7 @@ interface Bowl {
     fiber: number;
   };
   micros: string[];
+  ingredients: string[];
   mealTypes: string[];
   isActive?: boolean;
 }
@@ -56,7 +57,7 @@ export default function BowlsPage() {
 
   const [newBowl, setNewBowl] = useState({
     name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
-    macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+    macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
   });
 
   const limit = 10;
@@ -163,7 +164,7 @@ export default function BowlsPage() {
         setEditingBowlId(null);
         setNewBowl({
           name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
-          macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+          macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
         });
         fetchBowls();
         if (editingBowlId && selectedBowl && selectedBowl._id === editingBowlId) {
@@ -227,7 +228,7 @@ export default function BowlsPage() {
           setEditingBowlId(null);
           setNewBowl({
             name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
-            macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+            macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
           });
           setIsCreateModalOpen(true);
         }}>
@@ -485,6 +486,20 @@ export default function BowlsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Ingredients Tags */}
+              {selectedBowl.ingredients && selectedBowl.ingredients.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ingredients</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBowl.ingredients.map((ingredient, idx) => (
+                      <span key={idx} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
+                        {ingredient}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6 md:px-8 border-t border-gray-100 shrink-0 bg-white">
@@ -499,6 +514,7 @@ export default function BowlsPage() {
                   baseWeight: selectedBowl.baseWeight,
                   macros: selectedBowl.macros,
                   micros: selectedBowl.micros ? selectedBowl.micros.join(", ") : "",
+                  ingredients: selectedBowl.ingredients ? selectedBowl.ingredients.join(", ") : "",
                   mealTypes: selectedBowl.mealTypes || [],
                   imageId: typeof selectedBowl.imageId === 'string' ? selectedBowl.imageId : selectedBowl.imageId?._id || "",
                   isActive: selectedBowl.isActive ?? true,
@@ -636,7 +652,13 @@ export default function BowlsPage() {
                 <div className="mt-8">
                   <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 uppercase tracking-wider">Micronutrients</h4>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Micros List <span className="font-normal text-gray-400 ml-1">(comma separated)</span></label>
-                  <textarea rows={3} value={newBowl.micros} onChange={e => setNewBowl({...newBowl, micros: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 resize-y" placeholder="E.g. Vitamin C, Iron, Calcium" />
+                  <textarea rows={2} value={newBowl.micros} onChange={e => setNewBowl({...newBowl, micros: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 resize-y" placeholder="E.g. Vitamin C, Iron, Calcium" />
+                </div>
+
+                <div className="mt-8">
+                  <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 uppercase tracking-wider">Ingredients</h4>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients List <span className="font-normal text-gray-400 ml-1">(comma separated)</span></label>
+                  <textarea rows={3} value={newBowl.ingredients} onChange={e => setNewBowl({...newBowl, ingredients: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 resize-y" placeholder="E.g. Brown Rice, Salmon, Edamame" />
                 </div>
               </form>
             </div>
