@@ -7,9 +7,9 @@ export async function POST(request: Request) {
     await connectToDatabase();
     
     const body = await request.json();
-    const { name, category, duration, days, mealCombinations, allowedBowls } = body;
+    const { name, category, duration, days, mealType, selections, totalPrice, discountPrice } = body;
 
-    if (!name || !category || !duration || !days || !mealCombinations || !allowedBowls) {
+    if (!name || !category || !duration || !days || !mealType || !selections || totalPrice === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -18,8 +18,10 @@ export async function POST(request: Request) {
       category,
       duration,
       days: Number(days),
-      mealCombinations,
-      allowedBowls,
+      mealType,
+      selections,
+      totalPrice: Number(totalPrice),
+      discountPrice: discountPrice ? Number(discountPrice) : 0,
     });
 
     return NextResponse.json({ success: true, tier: newTier }, { status: 201 });

@@ -406,11 +406,11 @@ export default function BowlsPage() {
 
               {/* Title & Basics */}
               <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-3xl font-bold text-gray-900 tracking-tight">{selectedBowl.name}</h3>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-500 font-mono text-xs rounded-lg border border-gray-200">{selectedBowl.code}</span>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3 mb-2">
+                      <h3 className="text-3xl font-bold text-gray-900 tracking-tight leading-tight">{selectedBowl.name}</h3>
+                      <span className="shrink-0 mt-1.5 px-2 py-1 bg-gray-100 text-gray-500 font-mono text-xs rounded-lg border border-gray-200">{selectedBowl.code}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border border-primary/20 bg-primary/5 text-primary">
@@ -432,7 +432,7 @@ export default function BowlsPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-3xl font-bold text-primary tracking-tight">${selectedBowl.basePrice.toFixed(2)}</p>
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mt-1">Base Price</p>
                   </div>
@@ -663,9 +663,9 @@ export default function BowlsPage() {
               </form>
             </div>
             <div className="p-6 md:px-8 border-t border-gray-100 shrink-0 bg-white flex justify-end gap-3 rounded-b-3xl">
-              <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)} className="px-6 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 border-gray-200 shadow-sm">
+              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-6 py-2.5 rounded-xl font-medium text-gray-700 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition-all">
                 Cancel
-              </Button>
+              </button>
               <Button variant="primary" type="submit" form="create-bowl-form" disabled={isCreating || isUploadingImage} className="px-8 py-2.5 rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all">
                 {isCreating ? "Saving..." : (editingBowlId ? "Save Changes" : "Create Bowl")}
               </Button>

@@ -10,8 +10,8 @@ export async function GET(
     await connectToDatabase();
     const { id } = await params;
     
-    // We populate 'allowedBowls' so the frontend preview drawer can display them
-    const tier = await PlanTier.findById(id).populate("allowedBowls").lean();
+    // We populate 'selections.bowls' so the frontend preview drawer can display them
+    const tier = await PlanTier.findById(id).populate("selections.bowls").lean();
     if (!tier) {
       return NextResponse.json({ error: "Plan Tier not found" }, { status: 404 });
     }

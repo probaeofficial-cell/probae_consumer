@@ -5,8 +5,13 @@ export interface IPlanTier extends Document {
   category: string;
   duration: string;
   days: number;
-  mealCombinations: string[];
-  allowedBowls: mongoose.Types.ObjectId[];
+  mealType: string;
+  selections: {
+    type: string; // e.g. "B", "L", "D"
+    bowls: mongoose.Types.ObjectId[];
+  }[];
+  totalPrice: number;
+  discountPrice?: number;
 }
 
 const PlanTierSchema: Schema = new Schema({
@@ -14,8 +19,13 @@ const PlanTierSchema: Schema = new Schema({
   category: { type: String, required: true },
   duration: { type: String, required: true },
   days: { type: Number, required: true },
-  mealCombinations: [{ type: String, required: true }],
-  allowedBowls: [{ type: Schema.Types.ObjectId, ref: "Bowl", required: true }],
+  mealType: { type: String, required: true },
+  selections: [{
+    type: { type: String, required: true }, // "B", "L", "D"
+    bowls: [{ type: Schema.Types.ObjectId, ref: "Bowl" }]
+  }],
+  totalPrice: { type: Number, required: true, default: 0 },
+  discountPrice: { type: Number, default: 0 },
 });
 
 export default mongoose.models.PlanTier || mongoose.model<IPlanTier>("PlanTier", PlanTierSchema);
