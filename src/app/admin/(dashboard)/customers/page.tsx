@@ -57,6 +57,16 @@ export default function CustomersPage() {
         setCustomers(data.users);
         setTotalCount(data.totalCount);
         setTotalPages(Math.ceil(data.totalCount / limit) || 1);
+        
+        // Handle Deep Linking
+        const params = new URLSearchParams(window.location.search);
+        const urlUserId = params.get("userId");
+        if (urlUserId) {
+          const user = data.users.find((u: UserProfile) => u._id === urlUserId);
+          if (user) setSelectedCustomer(user);
+          // Remove query param without reloading to prevent re-triggering if user closes drawer
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch customers", error);

@@ -10,11 +10,59 @@ export default function AdminHeader() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Close dropdown when clicking outside
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchNotifications();
+    // Optionally poll every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/admin/notifications");
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    }
+  };
+
+  const handleNotificationClick = async (notif: any) => {
+    if (!notif.read) {
+      try {
+        await fetch("/api/admin/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: notif._id })
+        });
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, read: true } : n));
+      } catch (error) {
+        console.error("Failed to update notification", error);
+      }
+    }
+    setIsNotifOpen(false);
+    if (notif.link) {
+      router.push(notif.link);
+    }
+  };
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -42,59 +90,100 @@ export default function AdminHeader() {
         />
       </div>
 
-      <div className="flex items-center space-x-6 relative" ref={dropdownRef}>
-        <button className="flex items-center space-x-2 border border-gray-200 rounded-full px-4 py-2 hover:bg-gray-50 transition-colors focus:outline-none">
-          <Bell className="w-4 h-4 text-gray-600" />
-          <span className="text-sm text-gray-700 font-medium">Notifications</span>
-          <span className="bg-[#222222] text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 font-bold">
-            2
-          </span>
-        </button>
+      <div className="flex items-center space-x-6">
         
-        <button 
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-md hover:opacity-90 transition-opacity focus:outline-none"
-        >
-          <User className="w-5 h-5" />
-        </button>
+        {/* Notifications Dropdown */}
+        <div className="relative" ref={notifRef}>
+          <button 
+            onClick={() => { setIsNotifOpen(!isNotifOpen); setIsDropdownOpen(false); }}
+            className="flex items-center space-x-2 border border-gray-200 rounded-full px-4 py-2 hover:bg-gray-50 transition-colors focus:outline-none"
+          >
+            <Bell className="w-4 h-4 text-gray-600" />
+            <span className="text-sm text-gray-700 font-medium">Notifications</span>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 font-bold">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
-        {isDropdownOpen && (
-          <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="px-5 py-4 border-b border-gray-50">
-              <span className="text-base font-semibold text-gray-900">Admin</span>
+          {isNotifOpen && (
+            <div className="absolute right-0 top-12 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-5 py-4 border-b border-gray-50 flex justify-between items-center">
+                <span className="text-base font-semibold text-gray-900">Notifications</span>
+                {unreadCount > 0 && <span className="text-xs text-primary font-medium">{unreadCount} unread</span>}
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500 text-sm">No notifications yet.</div>
+                ) : (
+                  notifications.map(notif => (
+                    <div 
+                      key={notif._id} 
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors flex items-start gap-3 ${!notif.read ? 'bg-blue-50/30' : ''}`}
+                    >
+                      <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${!notif.read ? 'bg-primary' : 'bg-transparent'}`} />
+                      <div>
+                        <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{notif.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleDateString()} {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            
-            <div className="py-2">
-              <Link 
-                href="/admin/profile" 
-                className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <User className="w-4 h-4 mr-3 text-gray-500" />
-                View Profile
-              </Link>
+          )}
+        </div>
+        
+        {/* Profile Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsNotifOpen(false); }}
+            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-md hover:opacity-90 transition-opacity focus:outline-none"
+          >
+            <User className="w-5 h-5" />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-5 py-4 border-b border-gray-50">
+                <span className="text-base font-semibold text-gray-900">Admin</span>
+              </div>
               
-              <Link 
-                href="/admin/settings/password" 
-                className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-                onClick={() => setIsDropdownOpen(false)}
-              >
-                <Key className="w-4 h-4 mr-3 text-gray-500" />
-                Change Password
-              </Link>
+              <div className="py-2">
+                <Link 
+                  href="/admin/profile" 
+                  className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <User className="w-4 h-4 mr-3 text-gray-500" />
+                  View Profile
+                </Link>
+                
+                <Link 
+                  href="/admin/settings/password" 
+                  className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <Key className="w-4 h-4 mr-3 text-gray-500" />
+                  Change Password
+                </Link>
+              </div>
+              
+              <div className="border-t border-gray-50 py-2">
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors text-left font-medium"
+                >
+                  <LogOut className="w-4 h-4 mr-3" />
+                  Log Out
+                </button>
+              </div>
             </div>
-            
-            <div className="border-t border-gray-50 py-2">
-              <button 
-                onClick={handleLogout}
-                className="flex items-center w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors text-left font-medium"
-              >
-                <LogOut className="w-4 h-4 mr-3" />
-                Log Out
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
     </header>
   );

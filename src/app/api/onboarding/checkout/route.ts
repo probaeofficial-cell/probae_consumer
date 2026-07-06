@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import User from '@/models/User';
 import Subscription from '@/models/Subscription';
+import Notification from '@/models/Notification';
 import connectToDatabase from '@/lib/db';
 
 // Helper to get client IP
@@ -39,6 +40,13 @@ export async function POST(request: Request) {
         calculatedBowls: body.calculatedBowls,
         finalTotalPrice: body.finalTotalPrice,
         status: "active"
+      });
+
+      // Emit a notification to the admin
+      await Notification.create({
+        message: `New user onboarded: ${user.name}`,
+        type: 'NEW_USER',
+        link: `/admin/customers?userId=${user._id}`
       });
     }
 

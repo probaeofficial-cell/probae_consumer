@@ -61,9 +61,9 @@ export default function MenuSection({ bowls }: MenuSectionProps) {
       
       {/* Back Button */}
       <div className="px-6 md:px-12 mb-8">
-        <Link href="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-all bg-white px-5 py-2.5 rounded-full border border-gray-200 shadow-sm hover:shadow-md w-fit font-bold tracking-wide text-sm">
+        <Link href="/" className="inline-flex items-center gap-2 text-primary bg-primary/10 hover:bg-primary/20 transition-colors px-5 py-2.5 rounded-xl font-bold w-fit text-sm">
           <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
-          BACK TO HOME
+          Back to Home
         </Link>
       </div>
 

@@ -9,6 +9,7 @@ import Bowl from "@/models/Bowl";
 import "@/models/Image";
 import connectToDatabase from "@/lib/db";
 import FadeInUp from "@/components/animations/FadeInUp";
+import OptimizingSection from "@/components/animations/OptimizingSection";
 
 // This is a Server Component
 export default async function LandingPage() {
@@ -144,19 +145,7 @@ export default async function LandingPage() {
           </section>
 
           {/* 3. OPTIMIZING SECTION */}
-          <section className="bg-transparent flex flex-col items-center justify-center py-24 md:py-32 px-6 relative z-10">
-            <FadeInUp className="flex flex-col items-center justify-center text-center">
-              <h2 className="text-5xl md:text-[8vw] font-black text-[#8B5CF6] leading-[0.9] tracking-tighter uppercase font-headline">
-                STOP DIETING.
-              </h2>
-              <h2 className="text-5xl md:text-[8vw] font-black text-[#10B981] leading-[0.9] tracking-tighter uppercase font-headline">
-                START OPTIMIZING.
-              </h2>
-              <Link href="/menu" className="mt-12 bg-gray-900 text-white px-8 py-4 md:px-10 md:py-5 rounded-full font-bold text-lg md:text-xl flex items-center gap-2 hover:scale-105 transition-transform duration-300 shadow-xl">
-                Explore The Menu
-              </Link>
-            </FadeInUp>
-          </section>
+          <OptimizingSection />
 
         </main>
         

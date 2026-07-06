@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function OnboardingPage() {
@@ -491,13 +491,23 @@ export default function OnboardingPage() {
             
             {/* PERSISTENT HEADER AREA FOR INDICATORS */}
             <div className="flex justify-between items-center mb-10">
-               <button 
-                  onClick={() => setStep(step - 1)} 
-                  className={`w-12 h-12 flex items-center justify-center bg-[#181818] rounded-full hover:bg-gray-800 transition-all duration-300 border border-gray-800/60 ${step === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                  aria-label="Go back"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-400" />
-               </button>
+               {step === 1 ? (
+                 <Link 
+                   href="/" 
+                   className="w-12 h-12 flex items-center justify-center bg-[#181818] rounded-full hover:bg-gray-800 transition-all duration-300 border border-gray-800/60"
+                   aria-label="Go home"
+                 >
+                   <Home className="w-5 h-5 text-gray-400" />
+                 </Link>
+               ) : (
+                 <button 
+                   onClick={() => setStep(step - 1)} 
+                   className="w-12 h-12 flex items-center justify-center bg-[#181818] rounded-full hover:bg-gray-800 transition-all duration-300 border border-gray-800/60"
+                   aria-label="Go back"
+                 >
+                   <ArrowLeft className="w-5 h-5 text-gray-400" />
+                 </button>
+               )}
                
                <div className="flex items-center gap-3">
                  <div className={`h-2.5 rounded-full transition-all duration-500 ease-out ${step === 1 ? 'w-10 bg-primary' : 'w-2.5 bg-gray-600'}`} />
