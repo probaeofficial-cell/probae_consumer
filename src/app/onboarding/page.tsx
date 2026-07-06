@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,10 +8,15 @@ import { useRouter } from "next/navigation";
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [customAllergy, setCustomAllergy] = useState("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [calorieProfile, setCalorieProfile] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
+    phone: "",
     address: "",
     sex: "Male",
     age: "25",
@@ -26,6 +31,36 @@ export default function OnboardingPage() {
     planFrequency: "5 DAYS",
     mealSlots: ["LUNCH"] as string[],
   });
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('/api/onboarding/profile');
+        if (res.ok) {
+          const { data } = await res.json();
+          if (data) {
+            setFormData(prev => ({ ...prev, ...data }));
+            
+            if (data.calorieProfile) {
+              setCalorieProfile(data.calorieProfile);
+            }
+            if (data.selectedPlan) {
+              setSelectedPlan(data.selectedPlan);
+            }
+
+            if (data.onboardingStep) {
+              setStep(data.onboardingStep);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile", err);
+      } finally {
+        setProfileLoaded(true);
+      }
+    }
+    fetchProfile();
+  }, []);
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -59,18 +94,103 @@ export default function OnboardingPage() {
   const handleContinueToStep2 = (e: React.FormEvent) => {
     e.preventDefault();
     setStep(2);
+    // Save progress in background
+    fetch('/api/onboarding/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...formData, onboardingStep: 2 })
+    }).catch(console.error);
   };
 
-  const handleContinueToStep3 = (e: React.FormEvent) => {
+  const handleContinueToStep3 = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep(3);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/onboarding/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, onboardingStep: 3 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCalorieProfile(data.calorieProfile);
+        setStep(3); // Go to Calorie Profile
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleContinueToStep4 = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Final Onboarding Data:", formData);
-    // In real app, make API call to create/update user profile, then redirect to menu
-    // router.push("/menu"); 
+    setStep(4);
+    fetch('/api/onboarding/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...formData, onboardingStep: 4 })
+    }).catch(console.error);
+  };
+
+  const handleContinueToStep5 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep(5);
+    // Save filter choices
+    fetch('/api/onboarding/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...formData, onboardingStep: 5 })
+    }).catch(console.error);
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/onboarding/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedPlan, onboardingStep: 6 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStep(6); // Success Step
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getDynamicPrice = (basePrice: number) => {
+    if (!calorieProfile) return basePrice;
+    
+    // 1. Scale by Calories (Baseline 2000)
+    let scale = calorieProfile.total / 2000;
+    
+    // 2. Scale by Meal Slots (Assuming basePrice is for 1 meal per day)
+    const mealsMultiplier = Math.max(1, formData.mealSlots.length);
+    
+    // 3. Scale by Days (Assuming basePrice is for 5 days)
+    let daysMultiplier = 1;
+    if (formData.planFrequency === "6 DAYS") daysMultiplier = 1.2;
+    if (formData.planFrequency === "7 DAYS") daysMultiplier = 1.4;
+
+    return Math.round(basePrice * scale * mealsMultiplier * daysMultiplier);
+  };
+
+  const getDynamicCalsPerMeal = () => {
+    if (!calorieProfile) return 400;
+    const meals = Math.max(1, formData.mealSlots.length);
+    return Math.round(calorieProfile.total / meals);
+  };
+
+  const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat') => {
+    if (!calorieProfile) return 0;
+    const meals = Math.max(1, formData.mealSlots.length);
+    return Math.round(calorieProfile[macro] / meals);
   };
 
   const commonAllergies = ["Peanuts", "Dairy", "Shellfish", "Tree Nuts", "Eggs", "Soy", "Wheat"];
@@ -162,20 +282,20 @@ export default function OnboardingPage() {
             {/* -------------------- STEP 1 -------------------- */}
             <div className={`transition-all duration-500 ${step === 1 ? 'block opacity-100' : 'hidden opacity-0 h-0'}`}>
               
-              <div className="mb-10 max-w-xl">
-                <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-4 leading-tight font-headline">
+              <div className="mb-6 max-w-xl">
+                <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2 leading-tight font-headline">
                   Build Your<br />Nutrition Profile
                 </h1>
-                <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+                <p className="text-gray-400 text-sm leading-relaxed">
                   We need a few details to precisely calculate your metabolic baseline.
                 </p>
               </div>
 
-              <form onSubmit={handleContinueToStep2} className="space-y-8">
+              <form onSubmit={handleContinueToStep2} className="space-y-6">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                   {/* Left Column */}
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
                         Full Name
@@ -186,18 +306,20 @@ export default function OnboardingPage() {
                         onChange={(e) => updateField("name", e.target.value)}
                         placeholder="Enter your name"
                         className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-inner"
+                        required
                       />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
-                        Delivery Address
+                        Phone Number
                       </label>
-                      <textarea 
-                        value={formData.address}
-                        onChange={(e) => updateField("address", e.target.value)}
-                        placeholder="Enter your full address"
-                        rows={3}
-                        className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-inner resize-none"
+                      <input 
+                        type="tel" 
+                        value={formData.phone}
+                        onChange={(e) => updateField("phone", e.target.value)}
+                        placeholder="Enter your phone number"
+                        className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-inner"
+                        required
                       />
                     </div>
                     
@@ -230,7 +352,7 @@ export default function OnboardingPage() {
                   </div>
 
                   {/* Right Column */}
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div className="grid grid-cols-3 gap-3 md:gap-4">
                       <div>
                         <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
@@ -241,6 +363,7 @@ export default function OnboardingPage() {
                           value={formData.age}
                           onChange={(e) => updateField("age", e.target.value)}
                           className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-primary transition-all text-center shadow-inner"
+                          required
                         />
                       </div>
                       <div>
@@ -252,6 +375,7 @@ export default function OnboardingPage() {
                           value={formData.height}
                           onChange={(e) => updateField("height", e.target.value)}
                           className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-primary transition-all text-center shadow-inner"
+                          required
                         />
                       </div>
                       <div>
@@ -263,8 +387,23 @@ export default function OnboardingPage() {
                           value={formData.weight}
                           onChange={(e) => updateField("weight", e.target.value)}
                           className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-primary transition-all text-center shadow-inner"
+                          required
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
+                        Delivery Address
+                      </label>
+                      <textarea 
+                        value={formData.address}
+                        onChange={(e) => updateField("address", e.target.value)}
+                        placeholder="Enter your full address"
+                        rows={2}
+                        className="w-full bg-[#222222] border border-gray-800 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-inner resize-none"
+                        required
+                      />
                     </div>
 
                     <div>
@@ -291,10 +430,11 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-gray-800/50 flex justify-end">
+                <div className="pt-4 border-t border-gray-800/50 flex justify-end">
                   <button
                     type="submit"
-                    className="w-full md:w-auto md:px-12 bg-tertiary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-lg shadow-tertiary/20"
+                    disabled={!formData.name || !formData.phone || !formData.address || !formData.age || !formData.height || !formData.weight}
+                    className="w-full md:w-auto md:px-12 bg-tertiary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-lg shadow-tertiary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue to Goals
                     <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
@@ -467,30 +607,166 @@ export default function OnboardingPage() {
 
                 <div className="pt-6 border-t border-gray-800/50 flex justify-end">
                   <button
-                    type="submit"
-                    className="w-full md:w-auto md:px-12 bg-tertiary text-white py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-lg shadow-tertiary/20"
+                    onClick={handleContinueToStep3}
+                    className="w-full md:w-auto md:px-12 bg-tertiary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-lg shadow-tertiary/20 disabled:opacity-50"
+                    disabled={isSubmitting}
                   >
-                    Complete Profile
-                    <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Calculate Profile
+                        <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
+                      </>
+                    )}
                   </button>
                 </div>
-
               </form>
             </div>
 
-            {/* -------------------- STEP 3 -------------------- */}
+            {/* -------------------- STEP 3 (Calorie Profile) -------------------- */}
             <div className={`transition-all duration-500 ${step === 3 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
-              
-              <div className="mb-6 max-w-xl text-center mx-auto">
-                <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2 font-headline">
-                  Choose Your <span className="text-secondary">Plan</span>
+              <div className="max-w-md mx-auto">
+                <h2 className="text-3xl font-bold text-white tracking-tight mb-12 text-center">
+                  Your Goal Calorie Profile
                 </h2>
-                <p className="text-[#E6D0BA]/80 text-sm md:text-base font-serif italic">
-                  Personalised to your calorie goal.
+
+                {calorieProfile && (
+                  <div className="flex flex-col items-center">
+                    {/* Donut Chart */}
+                    <div className="relative w-64 h-64 mb-12">
+                      <svg viewBox="0 0 300 300" className="w-full h-full transform -rotate-90">
+                        {(() => {
+                          const { protein, carbs, fat, fiber } = calorieProfile;
+                          const total = protein + carbs + fat + fiber;
+                          const circ = 2 * Math.PI * 120; // r=120
+                          
+                          // Calculate segments
+                          const pPct = protein / total;
+                          const cPct = carbs / total;
+                          const fPct = fat / total;
+                          const fiPct = fiber / total;
+                          
+                          const pStroke = pPct * circ;
+                          const cStroke = cPct * circ;
+                          const fStroke = fPct * circ;
+                          const fiStroke = fiPct * circ;
+                          
+                          let currentOffset = circ;
+                          const pOffset = currentOffset;
+                          currentOffset -= pStroke;
+                          
+                          const cOffset = currentOffset;
+                          currentOffset -= cStroke;
+                          
+                          const fOffset = currentOffset;
+                          currentOffset -= fStroke;
+                          
+                          const fiOffset = currentOffset;
+
+                          return (
+                            <>
+                              {/* Background track */}
+                              <circle cx="150" cy="150" r="120" fill="none" stroke="#222" strokeWidth="20" />
+                              
+                              {/* Protein Segment (Purple) */}
+                              <circle cx="150" cy="150" r="120" fill="none" stroke="#8B5CF6" strokeWidth="20" 
+                                strokeDasharray={`${pStroke} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
+                                
+                              {/* Carbs Segment (Orange) */}
+                              <circle cx="150" cy="150" r="120" fill="none" stroke="#F97316" strokeWidth="20" 
+                                strokeDasharray={`${cStroke} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out" />
+                                
+                              {/* Fat Segment (Green) */}
+                              <circle cx="150" cy="150" r="120" fill="none" stroke="#10B981" strokeWidth="20" 
+                                strokeDasharray={`${fStroke} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out" />
+                                
+                              {/* Fiber Segment (Peach) */}
+                              <circle cx="150" cy="150" r="120" fill="none" stroke="#FFB084" strokeWidth="20" 
+                                strokeDasharray={`${fiStroke} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out" />
+                            </>
+                          );
+                        })()}
+                      </svg>
+                      
+                      {/* Center Text */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-4xl font-bold text-white font-mono tracking-tight">
+                          {calorieProfile.total.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">KCAL</span>
+                      </div>
+                    </div>
+
+                    {/* Macro Grid */}
+                    <div className="w-full grid grid-cols-2 bg-[#151515] rounded-2xl border border-gray-800/60 overflow-hidden mb-8">
+                      {/* Protein */}
+                      <div className="p-6 border-b border-r border-gray-800/60">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
+                          <span className="text-sm text-gray-300">Protein</span>
+                        </div>
+                        <div className="text-xl font-bold text-white font-mono">{calorieProfile.protein}g</div>
+                      </div>
+                      
+                      {/* Carbs */}
+                      <div className="p-6 border-b border-gray-800/60">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#F97316]" />
+                          <span className="text-sm text-gray-300">Carbs</span>
+                        </div>
+                        <div className="text-xl font-bold text-white font-mono">{calorieProfile.carbs}g</div>
+                      </div>
+                      
+                      {/* Fat */}
+                      <div className="p-6 border-r border-gray-800/60">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                          <span className="text-sm text-gray-300">Fat</span>
+                        </div>
+                        <div className="text-xl font-bold text-white font-mono">{calorieProfile.fat}g</div>
+                      </div>
+                      
+                      {/* Fiber */}
+                      <div className="p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#FFB084]" />
+                          <span className="text-sm text-gray-300">Fiber</span>
+                        </div>
+                        <div className="text-xl font-bold text-white font-mono">{calorieProfile.fiber}g</div>
+                      </div>
+                    </div>
+
+                    {/* Continue to Filters Button */}
+                    <div className="w-full">
+                      <button 
+                        onClick={handleContinueToStep4}
+                        className="w-full border-2 border-dashed border-[#F97316] p-1.5 rounded-2xl group"
+                      >
+                        <div className="w-full bg-[#F97316] text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 group-hover:bg-[#EA580C] transition-colors">
+                          Customize Plan
+                          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* -------------------- STEP 4 (Filters) -------------------- */}
+            <div className={`transition-all duration-500 ${step === 4 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
+              
+              <div className="mb-6 max-w-xl">
+                <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-2 font-headline">
+                  Customize Your <span className="text-[#4CAF50]">Plan</span>
+                </h2>
+                <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+                  Tailor your meals to your dietary needs.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-4">
+              <form onSubmit={handleContinueToStep5} className="max-w-xl mx-auto space-y-4">
                 
                 {/* Plan Duration */}
                 <div className="flex justify-center">
@@ -511,7 +787,7 @@ export default function OnboardingPage() {
                   <div className="relative flex p-1 bg-[#151515] rounded-2xl border border-gray-800/60">
                     {/* Sliding Pill */}
                     <div 
-                       className="absolute inset-y-1 left-1 w-[calc(33.333%-2.66px)] bg-secondary rounded-xl transition-transform duration-300 ease-out shadow-[0_0_15px_rgba(76,175,80,0.3)]"
+                       className="absolute inset-y-1 left-1 w-[calc(33.333%-2.66px)] bg-[#4CAF50] rounded-xl transition-transform duration-300 ease-out shadow-[0_0_15px_rgba(76,175,80,0.3)]"
                        style={{ 
                          transform: formData.planFrequency === "5 DAYS" ? "translateX(0)" : 
                                     formData.planFrequency === "6 DAYS" ? "translateX(100%)" : "translateX(200%)" 
@@ -561,16 +837,225 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Submit Circle Button */}
-                <div className="flex justify-center pt-4">
-                  <button type="submit" className="w-20 h-20 rounded-full bg-tertiary flex items-center justify-center text-white hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,117,31,0.5)]">
-                    <Check className="w-8 h-8" strokeWidth={3} />
+                <div className="pt-6 border-t border-gray-800/50 flex justify-end">
+                  <button
+                    type="submit"
+                    className="w-full md:w-auto md:px-12 bg-tertiary text-white py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#EA580C] transition-colors shadow-lg shadow-tertiary/20"
+                  >
+                    Select Plan
+                    <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
                   </button>
                 </div>
 
               </form>
             </div>
             
+            {/* -------------------- STEP 5 (Plan Selection) -------------------- */}
+            <div className={`transition-all duration-500 ${step === 5 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
+              <div className="max-w-4xl mx-auto">
+                <h2 className="text-3xl font-bold text-white tracking-tight mb-2 text-center">
+                  Select Your Tier
+                </h2>
+                <p className="text-[#E6D0BA]/80 text-sm md:text-base font-serif italic text-center mb-12">
+                  Pricing adjusted for your {calorieProfile?.total} kcal target.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                  {/* CORE PLAN */}
+                  <div className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === 'Core' ? 'border-[#4CAF50] scale-[1.02] shadow-[0_0_30px_rgba(76,175,80,0.2)]' : 'border-transparent'} bg-[#4CAF50]`}>
+                    {selectedPlan === 'Core' && (
+                      <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <Check className="w-4 h-4 text-[#4CAF50]" strokeWidth={3} />
+                      </div>
+                    )}
+                    <h3 className="text-4xl font-bold text-white mb-2">Core</h3>
+                    <p className="text-white/90 text-sm mb-8">Balanced everyday nutrition</p>
+                    
+                    <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
+                      <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
+                      <h4 className="text-5xl font-bold text-white text-center mb-6">
+                        {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
+                      </h4>
+                      
+                      <div className="grid grid-cols-4 gap-2 mb-6">
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Protein</p>
+                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('protein')}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
+                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('carbs')}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
+                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
+                          <p className="font-bold text-gray-900">8g</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-white/90 text-center italic font-serif">
+                        Rich in iron and calcium, supports blood flow and strong bones
+                      </p>
+                    </div>
+
+                    <div className="flex items-end gap-3 mb-6">
+                      <span className="text-5xl font-bold text-white">₹{getDynamicPrice(1799)}</span>
+                      <span className="text-lg text-white/60 line-through mb-1">₹{getDynamicPrice(1900)}</span>
+                    </div>
+                    
+                    <p className="text-sm text-white font-mono mb-8">you saved ₹125 on this order</p>
+                    
+                    <button 
+                      onClick={() => setSelectedPlan('Core')}
+                      className="w-full bg-[#FFD700] hover:bg-white text-black py-4 rounded-xl font-bold text-lg transition-colors"
+                    >
+                      {selectedPlan === 'Core' ? 'Selected' : 'Choose Core'}
+                    </button>
+                  </div>
+
+                  {/* PRO PLAN */}
+                  <div className={`relative rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === 'Pro' ? 'border-[#8A3FD1] scale-[1.02] shadow-[0_0_30px_rgba(138,63,209,0.2)]' : 'border-transparent'} bg-[#8A3FD1]`}>
+                    <div className="absolute top-0 right-12 bg-[#FFD700] text-black text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-b-lg uppercase">
+                      Most Nutrient Dense
+                    </div>
+                    {selectedPlan === 'Pro' && (
+                      <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <Check className="w-4 h-4 text-[#8A3FD1]" strokeWidth={3} />
+                      </div>
+                    )}
+                    <h3 className="text-4xl font-bold text-white mb-2 mt-4">Pro</h3>
+                    <p className="text-white/90 text-sm mb-8">Nutrient dense, chef curated</p>
+                    
+                    <div className="bg-white/10 rounded-2xl p-6 mb-8 backdrop-blur-sm">
+                      <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
+                      <h4 className="text-5xl font-bold text-white text-center mb-6">
+                        {getDynamicCalsPerMeal()} <span className="text-2xl font-normal">kcal</span>
+                      </h4>
+                      
+                      <div className="grid grid-cols-4 gap-2 mb-6">
+                        <div className="bg-[#FFD700] rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-yellow-900 uppercase">Protein</p>
+                          <p className="font-bold text-yellow-950">{Math.round(getDynamicMacroPerMeal('protein') * 1.2)}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Carbs</p>
+                          <p className="font-bold text-gray-900">{Math.round(getDynamicMacroPerMeal('carbs') * 0.9)}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fats</p>
+                          <p className="font-bold text-gray-900">{getDynamicMacroPerMeal('fat')}g</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-2 text-center">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">Fiber</p>
+                          <p className="font-bold text-gray-900">10g</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-white/90 text-center italic font-serif">
+                        Rich in zinc, B12 and iron, supports immunity, energy and blood flow
+                      </p>
+                    </div>
+
+                    <div className="flex items-end gap-3 mb-6">
+                      <span className="text-5xl font-bold text-white">₹{getDynamicPrice(2499)}</span>
+                      <span className="text-lg text-white/60 line-through mb-1">₹{getDynamicPrice(2800)}</span>
+                    </div>
+                    
+                    <p className="text-sm text-white font-mono mb-8">billed {formData.planDuration.toLowerCase()}</p>
+                    
+                    <button 
+                      onClick={() => setSelectedPlan('Pro')}
+                      className="w-full bg-[#FFD700] hover:bg-white text-black py-4 rounded-xl font-bold text-lg transition-colors"
+                    >
+                      {selectedPlan === 'Pro' ? 'Selected' : 'Choose Pro'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-center mt-12 mb-20">
+                  <button 
+                    onClick={handleCheckout}
+                    disabled={!selectedPlan || isSubmitting}
+                    className="w-full max-w-sm bg-white text-black py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Checkout
+                        <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Sample Bowls Grid based on Meal Slots */}
+                {selectedPlan && (
+                  <div className="border-t border-gray-800/50 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <h3 className="text-2xl font-bold text-white mb-8 text-center">
+                      Sample {selectedPlan} Bowls for You
+                    </h3>
+                    
+                    <div className="space-y-12">
+                      {formData.mealSlots.map(slot => (
+                        <div key={slot}>
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              slot === 'B-FAST' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6]' : 
+                              slot === 'LUNCH' ? 'bg-[#10B981]/20 text-[#10B981]' : 
+                              'bg-[#F97316]/20 text-[#F97316]'
+                            }`}>
+                              {slot === 'B-FAST' && <Sun className="w-4 h-4" />}
+                              {slot === 'LUNCH' && <Utensils className="w-4 h-4" />}
+                              {slot === 'DINNER' && <Moon className="w-4 h-4" />}
+                            </div>
+                            <h4 className="text-xl font-bold text-white tracking-wide">{slot}</h4>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 hover:border-gray-600 transition-colors">
+                                <div className="w-full h-32 bg-[#222] rounded-xl mb-4" />
+                                <div className="flex justify-between items-start mb-2">
+                                  <h5 className="font-bold text-gray-200">Sample Bowl {i}</h5>
+                                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-400">
+                                    ~{Math.round(calorieProfile?.total / (formData.mealSlots.length * 3))} kcal
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 line-clamp-2">Chef prepared high-quality ingredients specifically calibrated for your goal.</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* -------------------- STEP 6 (Success) -------------------- */}
+            <div className={`transition-all duration-500 ${step === 6 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
+              <div className="max-w-md mx-auto text-center py-20">
+                <div className="w-24 h-24 bg-tertiary/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                  <Check className="w-12 h-12 text-tertiary" strokeWidth={3} />
+                </div>
+                <h2 className="text-4xl font-bold text-white tracking-tight mb-4 font-headline">
+                  Congratulations!
+                </h2>
+                <p className="text-gray-400 text-lg leading-relaxed mb-12">
+                  Your personalised {selectedPlan} plan has been locked in.<br/>
+                  We will connect with you shortly.
+                </p>
+                <Link href="/menu" className="inline-block bg-[#222] hover:bg-[#333] text-white px-8 py-4 rounded-xl font-bold transition-colors">
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
