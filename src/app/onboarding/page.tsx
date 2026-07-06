@@ -274,10 +274,50 @@ export default function OnboardingPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const plan = plans.find(p => p._id === selectedPlan);
+      
+      const calculatedBowls: any[] = [];
+      let selectedMealCombo = formData.mealSlots.join(" + ");
+
+      if (plan && plan.selections) {
+        plan.selections.forEach((bucket: any) => {
+          let isSlotSelected = false;
+          if (bucket.type === 'B' && formData.mealSlots.includes('B-FAST')) isSlotSelected = true;
+          if (bucket.type === 'L' && formData.mealSlots.includes('LUNCH')) isSlotSelected = true;
+          if (bucket.type === 'D' && formData.mealSlots.includes('DINNER')) isSlotSelected = true;
+          
+          if (isSlotSelected && bucket.bowls) {
+            bucket.bowls.forEach((bowl: any) => {
+              const stats = getDynamicBowlStats(bowl, bucket.type);
+              calculatedBowls.push({
+                originalBowlId: bowl._id,
+                name: bowl.name,
+                assignedCalories: stats.calories,
+                calculatedWeight: stats.weight,
+                calculatedPrice: stats.price,
+                mealType: bucket.type === 'B' ? 'Breakfast' : bucket.type === 'L' ? 'Lunch' : bucket.type === 'D' ? 'Dinner' : bucket.type,
+                ratio: getRatioForType(bucket.type),
+                macros: stats.macros,
+                micros: bowl.micros || []
+              });
+            });
+          }
+        });
+      }
+
+      const prices = plan ? getPlanDynamicPrices(plan) : { total: 0, discounted: 0 };
+      const finalTotalPrice = prices.discounted;
+
       const res = await fetch('/api/onboarding/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selectedPlan, onboardingStep: 6 })
+        body: JSON.stringify({ 
+          selectedPlan, 
+          onboardingStep: 6,
+          selectedMealCombo,
+          calculatedBowls,
+          finalTotalPrice
+        })
       });
       const data = await res.json();
       if (data.success) {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import Subscription from "@/models/Subscription";
+import "@/models/PlanTier"; // Register model for populate
+import "@/models/User"; // Register model for populate
 import connectToDatabase from "@/lib/db";
 
 export async function GET(request: Request) {

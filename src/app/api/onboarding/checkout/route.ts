@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import User from '@/models/User';
+import Subscription from '@/models/Subscription';
 import connectToDatabase from '@/lib/db';
 
 // Helper to get client IP
@@ -28,6 +29,18 @@ export async function POST(request: Request) {
       { selectedPlan: body.selectedPlan, status: 'PLAN_SELECTED', onboardingStep: 6 },
       { new: true }
     );
+
+    // Ensure we create the Subscription
+    if (body.calculatedBowls && body.finalTotalPrice !== undefined) {
+      await Subscription.create({
+        user: user._id,
+        plan: body.selectedPlan,
+        selectedMealCombo: body.selectedMealCombo || "",
+        calculatedBowls: body.calculatedBowls,
+        finalTotalPrice: body.finalTotalPrice,
+        status: "active"
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Checkout successful. We will connect with you.", data: user });
   } catch (error: any) {

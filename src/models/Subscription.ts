@@ -6,6 +6,8 @@ export interface ICalculatedBowl {
   assignedCalories: number;
   calculatedWeight: number;
   calculatedPrice: number;
+  mealType?: string;
+  ratio?: number;
   macros: {
     protein: number;
     carbs: number;
@@ -31,6 +33,8 @@ const CalculatedBowlSchema = new Schema({
   assignedCalories: { type: Number, required: true },
   calculatedWeight: { type: Number, required: true },
   calculatedPrice: { type: Number, required: true },
+  mealType: { type: String },
+  ratio: { type: Number },
   macros: {
     protein: { type: Number, required: true },
     carbs: { type: Number, required: true },
