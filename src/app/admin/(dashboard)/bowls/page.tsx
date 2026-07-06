@@ -8,6 +8,7 @@ import Alert from "@/components/ui/Alert";
 interface Bowl {
   _id: string;
   name: string;
+  code: string;
   category: string;
   baseCalories: number;
   basePrice: number;
@@ -54,7 +55,7 @@ export default function BowlsPage() {
   };
 
   const [newBowl, setNewBowl] = useState({
-    name: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+    name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
     macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
   });
 
@@ -161,7 +162,7 @@ export default function BowlsPage() {
         setIsCreateModalOpen(false);
         setEditingBowlId(null);
         setNewBowl({
-          name: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+          name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
           macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
         });
         fetchBowls();
@@ -224,7 +225,7 @@ export default function BowlsPage() {
         <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
           setEditingBowlId(null);
           setNewBowl({
-            name: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+            name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
             macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
           });
           setIsCreateModalOpen(true);
@@ -240,7 +241,7 @@ export default function BowlsPage() {
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-100 bg-white text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0 sticky top-0 z-10 backdrop-blur-md bg-white/80">
             <div className="col-span-2">Image</div>
-            <div className="col-span-3">Name</div>
+            <div className="col-span-3">Name & Code</div>
             <div className="col-span-2">Category</div>
             <div className="col-span-2">Base Calories</div>
             <div className="col-span-2">Base Price</div>
@@ -290,7 +291,10 @@ export default function BowlsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="col-span-3 font-semibold text-gray-900 group-hover:text-primary transition-colors">{bowl.name}</div>
+                  <div className="col-span-3 font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                    {bowl.name}
+                    <div className="text-[10px] text-gray-400 font-mono mt-0.5">{bowl.code}</div>
+                  </div>
                   <div className="col-span-2">
                     <div className="flex flex-wrap gap-1">
                       <span className="px-2 py-0.5 text-[10px] font-medium rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm">
@@ -402,7 +406,10 @@ export default function BowlsPage() {
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{selectedBowl.name}</h3>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-3xl font-bold text-gray-900 tracking-tight">{selectedBowl.name}</h3>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-500 font-mono text-xs rounded-lg border border-gray-200">{selectedBowl.code}</span>
+                    </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border border-primary/20 bg-primary/5 text-primary">
                         {Array.isArray(selectedBowl.category) ? selectedBowl.category[0] : selectedBowl.category}
@@ -484,6 +491,7 @@ export default function BowlsPage() {
                 setEditingBowlId(selectedBowl._id);
                 setNewBowl({
                   name: selectedBowl.name,
+                  code: selectedBowl.code || "",
                   category: Array.isArray(selectedBowl.category) ? selectedBowl.category[0] : selectedBowl.category,
                   baseCalories: selectedBowl.baseCalories,
                   basePrice: selectedBowl.basePrice,
@@ -530,6 +538,10 @@ export default function BowlsPage() {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
                     <input required type="text" value={newBowl.name} onChange={e => setNewBowl({...newBowl, name: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="E.g. Spicy Tuna" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Code</label>
+                    <input required type="text" value={newBowl.code} onChange={e => setNewBowl({...newBowl, code: e.target.value.toUpperCase()})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 uppercase font-mono" placeholder="E.g. STB-01" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>

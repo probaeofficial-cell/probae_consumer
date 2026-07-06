@@ -18,6 +18,7 @@ interface Bowl {
   _id: string;
   name: string;
   baseCalories: number;
+  code?: string;
   imageId?: {
     url: string;
   };
@@ -48,6 +49,17 @@ export default function TiersPage() {
   const [bowlsPage, setBowlsPage] = useState(1);
   const [bowlsTotalPages, setBowlsTotalPages] = useState(1);
   const [isFetchingBowls, setIsFetchingBowls] = useState(false);
+  const [bowlsSearchQuery, setBowlsSearchQuery] = useState("");
+  const [debouncedBowlsSearch, setDebouncedBowlsSearch] = useState("");
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedBowlsSearch(bowlsSearchQuery);
+      setBowlsPage(1); // Reset page on search
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [bowlsSearchQuery]);
 
   const [pageAlert, setPageAlert] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
@@ -93,6 +105,10 @@ export default function TiersPage() {
         queryParams.set("mealTypes", typesStr);
       }
 
+      if (debouncedBowlsSearch) {
+        queryParams.set("search", debouncedBowlsSearch);
+      }
+
       const res = await fetch(`/api/admin/bowls?${queryParams.toString()}`);
       const data = await res.json();
       if (data.success) {
@@ -104,7 +120,7 @@ export default function TiersPage() {
     } finally {
       setIsFetchingBowls(false);
     }
-  }, [newTier.mealCombinations]);
+  }, [newTier.mealCombinations, debouncedBowlsSearch]);
 
   useEffect(() => {
     fetchTiers();
@@ -364,7 +380,16 @@ export default function TiersPage() {
                 <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">{selectedBowlIds.length} Selected</span>
               </div>
               
-              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col flex-1 min-h-[300px]">
+              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col flex-1 min-h-[400px]">
+                <div className="p-3 border-b border-gray-100 bg-gray-50">
+                  <input
+                    type="text"
+                    placeholder="Search bowls by name or code..."
+                    value={bowlsSearchQuery}
+                    onChange={(e) => setBowlsSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm text-gray-900"
+                  />
+                </div>
                 <div className="flex flex-col flex-1 overflow-hidden">
                   <div className="flex-1 overflow-y-auto">
                     {isFetchingBowls && bowls.length === 0 ? (
@@ -398,7 +423,10 @@ export default function TiersPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-gray-900 truncate">{bowl.name}</p>
-                                <p className="text-xs text-gray-500">{bowl.baseCalories} kcal</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {bowl.code && <span className="text-[10px] text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded">{bowl.code}</span>}
+                                  <p className="text-xs text-gray-500">{bowl.baseCalories} kcal</p>
+                                </div>
                               </div>
                             </label>
                           );
@@ -416,7 +444,7 @@ export default function TiersPage() {
                         type="button"
                         onClick={() => setBowlsPage(p => Math.max(1, p - 1))}
                         disabled={bowlsPage === 1 || isFetchingBowls}
-                        className="px-3 py-1.5 text-xs h-auto !bg-white border-gray-200 hover:bg-gray-50"
+                        className="px-3 py-1.5 text-xs h-auto !bg-white border-gray-200 hover:bg-gray-50 !text-gray-700 hover:!text-gray-900"
                       >
                         <ChevronLeft className="w-3.5 h-3.5 mr-1" />
                         Prev
@@ -426,7 +454,7 @@ export default function TiersPage() {
                         type="button"
                         onClick={() => setBowlsPage(p => Math.min(bowlsTotalPages, p + 1))}
                         disabled={bowlsPage === bowlsTotalPages || isFetchingBowls}
-                        className="px-3 py-1.5 text-xs h-auto !bg-white border-gray-200 hover:bg-gray-50"
+                        className="px-3 py-1.5 text-xs h-auto !bg-white border-gray-200 hover:bg-gray-50 !text-gray-700 hover:!text-gray-900"
                       >
                         Next
                         <ChevronRight className="w-3.5 h-3.5 ml-1" />

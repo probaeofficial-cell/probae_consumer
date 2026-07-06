@@ -40,7 +40,10 @@ export async function GET(request: Request) {
 
     const query: any = {};
     if (search) {
-      query.name = { $regex: search, $options: "i" };
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
+      ];
     }
     if (category && category !== "All") {
       query.category = category;

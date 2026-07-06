@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IBowl extends Document {
   name: string;
+  code: string;
   imageId?: mongoose.Types.ObjectId;
   baseCalories: number;
   basePrice: number;
@@ -20,6 +21,7 @@ export interface IBowl extends Document {
 
 const BowlSchema: Schema = new Schema({
   name: { type: String, required: true },
+  code: { type: String, required: true, unique: true },
   imageId: { type: Schema.Types.ObjectId, ref: "Image" },
   baseCalories: { type: Number, required: true },
   basePrice: { type: Number, required: true },
