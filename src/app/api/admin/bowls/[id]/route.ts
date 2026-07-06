@@ -2,6 +2,26 @@ import connectToDatabase from "@/lib/db";
 import Bowl from "@/models/Bowl";
 import { NextResponse } from "next/server";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectToDatabase();
+    const { id } = await params;
+    
+    const bowl = await Bowl.findById(id).populate("imageId").lean();
+    if (!bowl) {
+      return NextResponse.json({ error: "Bowl not found" }, { status: 404 });
+    }
+    
+    return NextResponse.json({ success: true, bowl }, { status: 200 });
+  } catch (error) {
+    console.error("Get bowl error:", error);
+    return NextResponse.json({ error: "Failed to get bowl" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -6,7 +6,7 @@ export interface IBowl extends Document {
   baseCalories: number;
   basePrice: number;
   baseWeight: number;
-  category: string[];
+  category: string;
   macros: {
     protein: number;
     carbs: number;
@@ -24,7 +24,7 @@ const BowlSchema: Schema = new Schema({
   baseCalories: { type: Number, required: true },
   basePrice: { type: Number, required: true },
   baseWeight: { type: Number, required: true },
-  category: { type: [String], required: true },
+  category: { type: String, required: true, enum: ["Core", "Pro"] },
   macros: {
     protein: { type: Number, required: true },
     carbs: { type: Number, required: true },

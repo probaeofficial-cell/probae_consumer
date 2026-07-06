@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
 
@@ -29,7 +29,10 @@ export default function TiersPage() {
 
   // Side-sheet state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingTierId, setEditingTierId] = useState<string | null>(null);
+  const [selectedTier, setSelectedTier] = useState<any>(null);
 
   // Form state
   const [newTier, setNewTier] = useState({
@@ -144,8 +147,11 @@ export default function TiersPage() {
 
     setIsCreating(true);
     try {
-      const res = await fetch("/api/admin/tiers", {
-        method: "POST",
+      const url = editingTierId ? `/api/admin/tiers/${editingTierId}` : "/api/admin/tiers";
+      const method = editingTierId ? "PATCH" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...newTier,
@@ -154,13 +160,20 @@ export default function TiersPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showAlert('success', "Plan Tier created successfully!");
+        showAlert('success', `Plan Tier ${editingTierId ? "updated" : "created"} successfully!`);
         setIsDrawerOpen(false);
+        setEditingTierId(null);
         setNewTier({ name: "", duration: "weekly", days: 5, mealCombinations: [] });
         setSelectedBowlIds([]);
         fetchTiers();
+        
+        // Refresh selected tier if it was edited
+        if (editingTierId && selectedTier && selectedTier._id === editingTierId) {
+            const updated = await fetch(`/api/admin/tiers/${editingTierId}`).then(r => r.json());
+            if (updated.success) setSelectedTier(updated.tier);
+        }
       } else {
-        showAlert('error', data.error || "Failed to create Plan Tier.");
+        showAlert('error', data.error || `Failed to ${editingTierId ? "update" : "create"} Plan Tier.`);
       }
     } catch (error) {
       console.error(error);
@@ -192,6 +205,9 @@ export default function TiersPage() {
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Plan Tiers</h1>
         
         <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
+          setEditingTierId(null);
+          setNewTier({ name: "", duration: "weekly", days: 5, mealCombinations: [] });
+          setSelectedBowlIds([]);
           setIsDrawerOpen(true);
         }}>
           <Plus className="w-4 h-4 mr-2" />
@@ -251,10 +267,23 @@ export default function TiersPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="col-span-2 text-right">
+                  <div className="col-span-2 text-right flex items-center justify-end gap-3">
                     <span className="inline-flex items-center justify-center px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">
                       {tier.allowedBowls.length} Bowls
                     </span>
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/tiers/${tier._id}`);
+                        const data = await res.json();
+                        if (data.success) {
+                          setSelectedTier(data.tier);
+                          setIsPreviewOpen(true);
+                        }
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -273,8 +302,8 @@ export default function TiersPage() {
       <div className={`fixed top-0 right-0 h-full w-full sm:w-[500px] bg-white shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-[70] ${isDrawerOpen ? "translate-x-0" : "translate-x-full"} flex flex-col`}>
         <div className="p-6 md:px-8 border-b border-gray-100 flex justify-between items-center shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Create New Tier</h2>
-            <p className="text-xs text-gray-500 mt-1">Define pricing blueprints and allowed bowls.</p>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{editingTierId ? "Edit Tier" : "Create New Tier"}</h2>
+            <p className="text-xs text-gray-500 mt-1">{editingTierId ? "Update pricing blueprint details." : "Define pricing blueprints and allowed bowls."}</p>
           </div>
           <button 
             onClick={() => setIsDrawerOpen(false)}
@@ -415,9 +444,110 @@ export default function TiersPage() {
             Cancel
           </Button>
           <Button variant="primary" type="submit" form="create-tier-form" disabled={isCreating} className="px-8 py-2.5 rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all">
-            {isCreating ? "Saving..." : "Create Tier"}
+            {isCreating ? "Saving..." : editingTierId ? "Update Tier" : "Create Tier"}
           </Button>
         </div>
+      </div>
+
+      {/* Preview Drawer Overlay */}
+      <div 
+        className={`fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[60] transition-all duration-300 ${isPreviewOpen && !isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setIsPreviewOpen(false)}
+      />
+
+      {/* Preview Side-Sheet */}
+      <div className={`fixed top-0 right-0 h-full w-full sm:w-[500px] bg-white shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-[65] ${isPreviewOpen ? "translate-x-0" : "translate-x-full"} flex flex-col`}>
+        {selectedTier ? (
+          <>
+            <div className="p-6 md:px-8 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight">Tier Details</h2>
+              </div>
+              <button 
+                onClick={() => setIsPreviewOpen(false)}
+                className="text-gray-400 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 md:px-8 bg-gray-50/50">
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedTier.name}</h3>
+                
+                <div className="grid grid-cols-2 gap-y-4 mb-6">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Duration</p>
+                    <p className="text-gray-900 capitalize font-medium">{selectedTier.duration}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Days</p>
+                    <p className="text-gray-900 font-medium">{selectedTier.days} Days</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Meal Combinations</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTier.mealCombinations.map((combo: string, idx: number) => (
+                      <span key={idx} className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
+                        {combo}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-gray-900">Allowed Bowls</h4>
+                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">{selectedTier.allowedBowls.length} Bowls</span>
+                </div>
+                <div className="space-y-3">
+                  {selectedTier.allowedBowls.map((bowl: any) => (
+                    <div key={bowl._id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center shrink-0">
+                        {bowl.imageId?.url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={bowl.imageId.url} alt={bowl.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <BowlIcon className="w-5 h-5 text-gray-300" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{bowl.name}</p>
+                        <p className="text-xs text-gray-500 font-medium">{bowl.baseCalories} kcal</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 md:px-8 border-t border-gray-100 shrink-0 bg-white flex justify-end">
+              <Button 
+                variant="primary" 
+                className="w-full justify-center shadow-md shadow-primary/20 hover:shadow-lg transition-all"
+                onClick={() => {
+                  setEditingTierId(selectedTier._id);
+                  setNewTier({
+                    name: selectedTier.name,
+                    duration: selectedTier.duration,
+                    days: selectedTier.days,
+                    mealCombinations: selectedTier.mealCombinations,
+                  });
+                  setSelectedBowlIds(selectedTier.allowedBowls.map((b: any) => b._id || b));
+                  setIsDrawerOpen(true);
+                }}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Tier
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">Loading details...</div>
+        )}
       </div>
 
     </div>
