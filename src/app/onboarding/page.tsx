@@ -34,7 +34,19 @@ export default function OnboardingPage() {
     planDuration: "WEEKLY",
     planFrequency: "5 DAYS",
     mealSlots: ["LUNCH"] as string[],
+    mealRatios: { "LUNCH": 100 } as Record<string, number>,
   });
+
+  const balanceMealRatios = (slots: string[]) => {
+    if (slots.length === 0) return {};
+    const baseRatio = Math.floor(100 / slots.length);
+    let remainder = 100 - (baseRatio * slots.length);
+    const newRatios: Record<string, number> = {};
+    slots.forEach((slot, index) => {
+      newRatios[slot] = baseRatio + (index === 0 ? remainder : 0);
+    });
+    return newRatios;
+  };
 
   useEffect(() => {
     async function fetchProfile() {
@@ -43,7 +55,11 @@ export default function OnboardingPage() {
         if (res.ok) {
           const { data } = await res.json();
           if (data) {
-            setFormData(prev => ({ ...prev, ...data }));
+            const updatedData = { ...data };
+            if (updatedData.mealSlots && !updatedData.mealRatios) {
+              updatedData.mealRatios = balanceMealRatios(updatedData.mealSlots);
+            }
+            setFormData(prev => ({ ...prev, ...updatedData }));
             
             if (data.calorieProfile) {
               setCalorieProfile(data.calorieProfile);
@@ -95,17 +111,51 @@ export default function OnboardingPage() {
     setFormData((prev) => {
       const current = prev[field];
       if (current.includes(value)) {
-        return { ...prev, [field]: current.filter(item => item !== value) };
+        const newArray = current.filter(item => item !== value);
+        if (field === "mealSlots") {
+          return { ...prev, [field]: newArray, mealRatios: balanceMealRatios(newArray) };
+        }
+        return { ...prev, [field]: newArray };
       } else {
-        // If "No Restrictions" is selected for dietary, clear others
         if (field === "dietaryPreferences") {
           if (value === "No Restrictions") return { ...prev, [field]: ["No Restrictions"] };
-          // If a specific diet is selected, remove "No Restrictions"
           const filtered = current.filter(item => item !== "No Restrictions");
           return { ...prev, [field]: [...filtered, value] };
         }
-        return { ...prev, [field]: [...current, value] };
+        const newArray = [...current, value];
+        if (field === "mealSlots") {
+          return { ...prev, [field]: newArray, mealRatios: balanceMealRatios(newArray) };
+        }
+        return { ...prev, [field]: newArray };
       }
+    });
+  };
+
+  const handleRatioChange = (slotId: string, newValue: number) => {
+    if (formData.mealSlots.length <= 1) return;
+    const validValue = Math.min(100, Math.max(0, newValue));
+    setFormData((prev) => {
+      const newRatios = { ...prev.mealRatios };
+      newRatios[slotId] = validValue;
+      const otherSlots = prev.mealSlots.filter(s => s !== slotId);
+      if (otherSlots.length === 1) {
+        newRatios[otherSlots[0]] = 100 - validValue;
+      } else {
+        const remainingToDistribute = 100 - validValue;
+        const totalOther = otherSlots.reduce((sum, s) => sum + newRatios[s], 0);
+        let accumulated = 0;
+        for (let i = 0; i < otherSlots.length - 1; i++) {
+          const s = otherSlots[i];
+          const share = totalOther === 0 
+            ? Math.floor(remainingToDistribute / otherSlots.length) 
+            : Math.round((newRatios[s] / totalOther) * remainingToDistribute);
+          newRatios[s] = share;
+          accumulated += share;
+        }
+        const lastSlot = otherSlots[otherSlots.length - 1];
+        newRatios[lastSlot] = remainingToDistribute - accumulated;
+      }
+      return { ...prev, mealRatios: newRatios };
     });
   };
 
@@ -240,17 +290,29 @@ export default function OnboardingPage() {
     }
   };
 
-  const getDynamicCalsPerMeal = () => {
-    if (!calorieProfile || formData.mealSlots.length === 0) return 0;
-    return Math.round(calorieProfile.total / formData.mealSlots.length);
+  const getRatioForType = (typeCode: string) => {
+    let slotId = typeCode;
+    if (typeCode === 'B') slotId = 'B-FAST';
+    if (typeCode === 'L') slotId = 'LUNCH';
+    if (typeCode === 'D') slotId = 'DINNER';
+    if (!formData.mealSlots.includes(slotId)) return 0;
+    
+    return formData.mealRatios?.[slotId] ?? (100 / Math.max(1, formData.mealSlots.length));
   };
 
-  const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat' | 'fiber') => {
+  const getDynamicCalsPerMeal = (typeCode: string = '') => {
     if (!calorieProfile || formData.mealSlots.length === 0) return 0;
-    return Math.round(calorieProfile[macro] / formData.mealSlots.length);
+    const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
+    return Math.round(calorieProfile.total * ratio);
   };
 
-  const getDynamicBowlStats = (bowl: any) => {
+  const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat' | 'fiber', typeCode: string = '') => {
+    if (!calorieProfile || formData.mealSlots.length === 0) return 0;
+    const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
+    return Math.round(calorieProfile[macro] * ratio);
+  };
+
+  const getDynamicBowlStats = (bowl: any, typeCode: string = '') => {
     const defaultStats = {
       weight: bowl.baseWeight || 0,
       calories: bowl.baseCalories || 0,
@@ -259,7 +321,7 @@ export default function OnboardingPage() {
     };
     if (!bowl.baseCalories || formData.mealSlots.length === 0) return defaultStats;
     
-    const targetCals = getDynamicCalsPerMeal();
+    const targetCals = getDynamicCalsPerMeal(typeCode);
     const scale = targetCals / bowl.baseCalories;
     
     return {
@@ -293,7 +355,7 @@ export default function OnboardingPage() {
       
       if (isSlotSelected && bucket.bowls) {
         bucket.bowls.forEach((bowl: any) => {
-          const stats = getDynamicBowlStats(bowl);
+          const stats = getDynamicBowlStats(bowl, bucket.type);
           sumOfBowls += stats.price;
         });
       }
@@ -969,6 +1031,31 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
+                {/* Calorie Distribution UI */}
+                {formData.mealSlots.length > 1 && (
+                  <div className="mt-6">
+                    <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Calorie Distribution</h3>
+                    <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 space-y-6">
+                      {formData.mealSlots.map((slotId) => (
+                        <div key={slotId} className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-bold text-gray-300">{slotId}</span>
+                            <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">{formData.mealRatios?.[slotId] || 0}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={formData.mealRatios?.[slotId] || 0}
+                            onChange={(e) => handleRatioChange(slotId, parseInt(e.target.value))}
+                            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#4CAF50]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-6 border-t border-gray-800/50 flex justify-end">
                   <button
                     type="submit"
@@ -1165,7 +1252,7 @@ export default function OnboardingPage() {
                                           </div>
                                           
                                           {(() => {
-                                            const stats = getDynamicBowlStats(bowl);
+                                            const stats = getDynamicBowlStats(bowl, slot);
                                             return (
                                               <>
                                                 <div className="flex justify-between items-start mb-3">
@@ -1429,7 +1516,7 @@ export default function OnboardingPage() {
                                       </div>
                                     </div>
                                     {(() => {
-                                      const stats = getDynamicBowlStats(bowl);
+                                      const stats = getDynamicBowlStats(bowl, slot);
                                       return (
                                         <>
                                           <div className="flex justify-between items-start mb-3">

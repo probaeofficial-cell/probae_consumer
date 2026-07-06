@@ -16,6 +16,7 @@ export interface IUser extends Document {
   planDuration?: string;
   planFrequency?: string;
   mealSlots?: string[];
+  mealRatios?: Record<string, number>;
   
   onboardingStep?: number;
   dailyCalorieTarget?: number;
@@ -51,6 +52,7 @@ const UserSchema: Schema = new Schema({
   planDuration: { type: String },
   planFrequency: { type: String },
   mealSlots: [{ type: String }],
+  mealRatios: { type: Map, of: Number },
   
   onboardingStep: { type: Number, default: 1 },
   dailyCalorieTarget: { type: Number },
