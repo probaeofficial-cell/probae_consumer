@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -14,11 +15,11 @@ export default function OnboardingPage() {
   const [calorieProfile, setCalorieProfile] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isChartLoaded, setIsChartLoaded] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
+  // Trigger chart animation
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    if (step === 3) {
+    if (step === 3 || step === 6) {
       const timer = setTimeout(() => setIsChartLoaded(true), 100);
       return () => clearTimeout(timer);
     } else {
@@ -333,11 +334,13 @@ export default function OnboardingPage() {
           onboardingStep: 6,
           selectedMealCombo,
           calculatedBowls,
-          finalTotalPrice
+          finalTotalPrice,
+          purchasedCalories: formData.purchasedCalories
         })
       });
       const data = await res.json();
       if (data.success) {
+        setShowCheckoutModal(false);
         setStep(6); // Success Step
       }
     } catch (err) {
@@ -1308,7 +1311,7 @@ export default function OnboardingPage() {
 
                       <div className="flex justify-center mt-12 mb-20">
                         <button 
-                          onClick={handleCheckout}
+                          onClick={() => setShowCheckoutModal(true)}
                           disabled={!selectedPlan || isSubmitting}
                           className="w-full max-w-sm bg-white text-black py-4.5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors shadow-[0_0_30px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -1322,6 +1325,49 @@ export default function OnboardingPage() {
                           )}
                         </button>
                       </div>
+
+                      {/* Checkout Confirmation Modal */}
+                      {showCheckoutModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-[#151515] border border-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+                          >
+                            <div className="text-center mb-6">
+                              <div className="w-16 h-16 bg-[#FFD700]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Check className="w-8 h-8 text-[#FFD700]" />
+                              </div>
+                              <h3 className="text-2xl font-bold text-white mb-2 font-headline">Confirm Selection</h3>
+                              <p className="text-gray-400 text-sm">
+                                You are about to lock in your personalized plan.<br/>
+                                <span className="text-white font-semibold">Once selected, you cannot change your plan later.</span><br/>
+                                Are you ready to proceed?
+                              </p>
+                            </div>
+                            <div className="flex gap-4">
+                              <button 
+                                onClick={() => setShowCheckoutModal(false)}
+                                className="flex-1 py-3.5 rounded-xl font-bold text-white bg-gray-800 hover:bg-gray-700 transition-colors"
+                                disabled={isSubmitting}
+                              >
+                                Go Back
+                              </button>
+                              <button 
+                                onClick={handleCheckout}
+                                disabled={isSubmitting}
+                                className="flex-1 py-3.5 rounded-xl font-bold text-black bg-[#FFD700] hover:bg-white transition-colors flex items-center justify-center gap-2"
+                              >
+                                {isSubmitting ? (
+                                  <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                  "Confirm"
+                                )}
+                              </button>
+                            </div>
+                          </motion.div>
+                        </div>
+                      )}
 
                       {/* Sample Bowls Grid based on selected plan */}
                       {selectedPlan && plans.find(p => p._id === selectedPlan) && (
@@ -1473,13 +1519,13 @@ export default function OnboardingPage() {
                               <>
                                 <circle cx="150" cy="150" r="120" fill="none" stroke="#222" strokeWidth="20" />
                                 <circle cx="150" cy="150" r="120" fill="none" stroke="#8B5CF6" strokeWidth="20" 
-                                  strokeDasharray={`${pStroke} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
+                                  strokeDasharray={`${isChartLoaded ? pStroke : 0} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
                                 <circle cx="150" cy="150" r="120" fill="none" stroke="#F97316" strokeWidth="20" 
-                                  strokeDasharray={`${cStroke} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out" />
+                                  strokeDasharray={`${isChartLoaded ? cStroke : 0} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out delay-100" />
                                 <circle cx="150" cy="150" r="120" fill="none" stroke="#10B981" strokeWidth="20" 
-                                  strokeDasharray={`${fStroke} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out" />
+                                  strokeDasharray={`${isChartLoaded ? fStroke : 0} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out delay-200" />
                                 <circle cx="150" cy="150" r="120" fill="none" stroke="#FFB084" strokeWidth="20" 
-                                  strokeDasharray={`${fiStroke} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out" />
+                                  strokeDasharray={`${isChartLoaded ? fiStroke : 0} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out delay-300" />
                               </>
                             );
                           })()}
@@ -1487,42 +1533,62 @@ export default function OnboardingPage() {
                         
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                           <span className="text-4xl font-bold text-white font-mono tracking-tight">
-                            {calorieProfile.total.toLocaleString()}
+                            {(formData.purchasedCalories || calorieProfile.total).toLocaleString()}
                           </span>
-                          <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">KCAL</span>
+                          <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">
+                            {formData.purchasedCalories && formData.purchasedCalories !== calorieProfile.total ? "PROBAE KCAL" : "KCAL"}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="w-full max-w-md grid grid-cols-2 bg-[#151515] rounded-2xl border border-gray-800/60 overflow-hidden">
-                        <div className="p-6 border-b border-r border-gray-800/60">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
-                            <span className="text-sm text-gray-300">Protein</span>
-                          </div>
-                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.protein}g</div>
+                      {formData.purchasedCalories && formData.purchasedCalories !== calorieProfile.total && (
+                        <div className="mb-6 text-center">
+                          <p className="text-gray-400 text-sm">
+                            Your total daily requirement is <span className="text-white font-bold">{calorieProfile.total.toLocaleString()} kcal</span>.<br/>
+                            You are purchasing <span className="text-white font-bold">{formData.purchasedCalories.toLocaleString()} kcal</span> from us.
+                          </p>
                         </div>
-                        <div className="p-6 border-b border-gray-800/60">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#F97316]" />
-                            <span className="text-sm text-gray-300">Carbs</span>
+                      )}
+
+                      {(() => {
+                        const scaleFactor = (formData.purchasedCalories || calorieProfile.total) / calorieProfile.total;
+                        const p = Math.round(calorieProfile.protein * scaleFactor);
+                        const c = Math.round(calorieProfile.carbs * scaleFactor);
+                        const f = Math.round(calorieProfile.fat * scaleFactor);
+                        const fi = Math.round(calorieProfile.fiber * scaleFactor);
+                        return (
+                          <div className="w-full max-w-md grid grid-cols-2 bg-[#151515] rounded-2xl border border-gray-800/60 overflow-hidden">
+                            <div className="p-6 border-b border-r border-gray-800/60">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
+                                <span className="text-sm text-gray-300">Protein</span>
+                              </div>
+                              <div className="text-xl font-bold text-white font-mono">{p}g</div>
+                            </div>
+                            <div className="p-6 border-b border-gray-800/60">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#F97316]" />
+                                <span className="text-sm text-gray-300">Carbs</span>
+                              </div>
+                              <div className="text-xl font-bold text-white font-mono">{c}g</div>
+                            </div>
+                            <div className="p-6 border-r border-gray-800/60">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                                <span className="text-sm text-gray-300">Fat</span>
+                              </div>
+                              <div className="text-xl font-bold text-white font-mono">{f}g</div>
+                            </div>
+                            <div className="p-6">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#FFB084]" />
+                                <span className="text-sm text-gray-300">Fiber</span>
+                              </div>
+                              <div className="text-xl font-bold text-white font-mono">{fi}g</div>
+                            </div>
                           </div>
-                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.carbs}g</div>
-                        </div>
-                        <div className="p-6 border-r border-gray-800/60">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                            <span className="text-sm text-gray-300">Fat</span>
-                          </div>
-                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.fat}g</div>
-                        </div>
-                        <div className="p-6">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#FFB084]" />
-                            <span className="text-sm text-gray-300">Fiber</span>
-                          </div>
-                          <div className="text-xl font-bold text-white font-mono">{calorieProfile.fiber}g</div>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}

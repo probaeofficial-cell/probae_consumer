@@ -20,6 +20,7 @@ export interface IUser extends Document {
   
   onboardingStep?: number;
   dailyCalorieTarget?: number;
+  purchasedCalories?: number;
   calorieProfile?: {
     total: number;
     protein: number;
@@ -56,6 +57,7 @@ const UserSchema: Schema = new Schema({
   
   onboardingStep: { type: Number, default: 1 },
   dailyCalorieTarget: { type: Number },
+  purchasedCalories: { type: Number },
   calorieProfile: {
     total: { type: Number },
     protein: { type: Number },

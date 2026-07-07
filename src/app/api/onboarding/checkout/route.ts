@@ -27,7 +27,12 @@ export async function POST(request: Request) {
 
     user = await User.findByIdAndUpdate(
       user._id, 
-      { selectedPlan: body.selectedPlan, status: 'PLAN_SELECTED', onboardingStep: 6 },
+      { 
+        selectedPlan: body.selectedPlan, 
+        status: 'PLAN_SELECTED', 
+        onboardingStep: 6,
+        ...(body.purchasedCalories && { purchasedCalories: body.purchasedCalories })
+      },
       { new: true }
     );
 

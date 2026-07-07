@@ -1,5 +1,6 @@
 import connectToDatabase from "@/lib/db";
 import PlanTier from "@/models/PlanTier";
+import Bowl from "@/models/Bowl"; // Register Bowl model for population
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -32,7 +33,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const updatedTier = await PlanTier.findByIdAndUpdate(id, body, { new: true });
+    const updatedTier = await PlanTier.findByIdAndUpdate(id, body, { returnDocument: 'after' });
     
     if (!updatedTier) {
       return NextResponse.json({ error: "Plan Tier not found" }, { status: 404 });

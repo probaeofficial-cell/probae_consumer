@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import PlanRequest from "@/models/PlanRequest";
+import Notification from "@/models/Notification";
 import connectToDatabase from "@/lib/db";
 
 export async function POST(req: Request) {
@@ -16,6 +17,13 @@ export async function POST(req: Request) {
     });
 
     await newRequest.save();
+
+    // Create Notification for admin
+    await Notification.create({
+      message: `New enquiry from ${body.name || 'User'}`,
+      type: "enquiry",
+      link: "/admin/enquiries"
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -239,8 +239,17 @@ export default function SubscriptionsPage() {
               <div>
                 <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-4 uppercase tracking-wider">Calorie Profile</h4>
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center mb-4">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Daily Total</p>
-                  <p className="text-3xl font-bold text-primary">{selectedSub.user.calorieProfile?.total || 0} <span className="text-base text-gray-500 font-medium">kcal</span></p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    {selectedSub.user.purchasedCalories ? "Purchased Calories" : "Daily Total"}
+                  </p>
+                  <p className="text-3xl font-bold text-primary mb-1">
+                    {selectedSub.user.purchasedCalories || selectedSub.user.calorieProfile?.total || 0} <span className="text-base text-gray-500 font-medium">kcal</span>
+                  </p>
+                  {selectedSub.user.purchasedCalories && selectedSub.user.calorieProfile?.total && (
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                      Target Requirement: {selectedSub.user.calorieProfile.total} kcal
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   <div className="bg-white p-3 rounded-xl border border-gray-200 text-center">
@@ -268,10 +277,13 @@ export default function SubscriptionsPage() {
                 <div className="flex gap-2">
                   {selectedSub.user.mealSlots?.map(slot => {
                     const ratio = selectedSub.user.mealRatios?.[slot] ?? (100 / selectedSub.user.mealSlots.length);
+                    const totalToDistribute = selectedSub.user.purchasedCalories || selectedSub.user.calorieProfile?.total || 0;
+                    const slotCalories = Math.round(totalToDistribute * (ratio / 100));
                     return (
                       <div key={slot} className="flex-1 bg-white p-3 rounded-xl border border-gray-200 text-center">
                         <p className="text-xs font-bold text-gray-500 mb-1">{slot}</p>
                         <p className="text-lg font-bold text-primary">{ratio}%</p>
+                        <p className="text-[11px] font-semibold text-gray-500">{slotCalories} kcal</p>
                       </div>
                     );
                   })}

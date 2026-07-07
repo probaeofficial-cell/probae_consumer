@@ -13,7 +13,8 @@ import {
   Layers,
   Shield,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  MessageSquare
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import LogoutModal from "./LogoutModal";
@@ -44,6 +45,7 @@ export default function AdminSidebar() {
     { name: "Plan Tiers", href: "/admin/tiers", icon: Layers },
     { name: "Subscriptions", href: "/admin/subscriptions", icon: ShoppingCart },
     { name: "Customers", href: "/admin/customers", icon: Users },
+    { name: "Enquiries", href: "/admin/enquiries", icon: MessageSquare },
     { name: "Team", href: "/admin/team", icon: Shield },
   ];
 
