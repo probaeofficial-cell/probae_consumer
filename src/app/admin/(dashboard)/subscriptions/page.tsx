@@ -17,6 +17,9 @@ interface CalculatedBowl {
     fat: number;
     fiber: number;
   };
+  mealType?: string;
+  inferredType?: string;
+  ratio?: number;
 }
 
 interface Subscription {

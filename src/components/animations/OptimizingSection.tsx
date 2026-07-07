@@ -11,7 +11,7 @@ export default function OptimizingSection() {
   const { scrollYProgress } = useScroll({
     target: containerRef,
     // Animation finishes exactly when the bottom of this section hits the bottom of the screen
-    offset: ["start bottom", "end bottom"]
+    offset: ["start end", "end end"]
   });
 
   // Scale and fade in the main text
