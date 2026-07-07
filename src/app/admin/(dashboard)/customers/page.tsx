@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Eye, ChevronLeft, ChevronRight, X, User as UserIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 
 interface UserProfile {
@@ -85,7 +86,12 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-8rem)] rounded-2xl bg-white border border-gray-100 overflow-hidden relative shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="flex flex-col w-full h-[calc(100vh-8rem)] rounded-2xl bg-white border border-gray-100 overflow-hidden relative shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+    >
       
       {/* Top Action Bar */}
       <div className="p-6 md:p-8 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-100 bg-white z-10 relative">
@@ -292,6 +298,6 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

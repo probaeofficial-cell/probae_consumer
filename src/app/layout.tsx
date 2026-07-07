@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "Probae | Premium Health Bowls",
   description: "Delicious, chef-crafted health bowls tailored to your calorie and macronutrient goals. Join Probae for a personalized culinary experience.",
   keywords: ["health bowls", "meal prep", "healthy eating", "custom meals", "Probae", "nutrition"],
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
   openGraph: {
     title: "Probae | Premium Health Bowls",
     description: "Delicious, chef-crafted health bowls tailored to your calorie and macronutrient goals. Join Probae for a personalized culinary experience.",

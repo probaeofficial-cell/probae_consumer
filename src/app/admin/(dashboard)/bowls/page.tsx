@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Plus, Eye, Edit, ChevronLeft, ChevronRight, X, Salad as BowlIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
 
@@ -185,7 +186,12 @@ export default function BowlsPage() {
   };
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-8rem)] rounded-2xl bg-white border border-gray-100 overflow-hidden relative shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="flex flex-col w-full h-[calc(100vh-8rem)] rounded-2xl bg-white border border-gray-100 overflow-hidden relative shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+    >
       
       {/* Toast Alert */}
       {pageAlert && (
@@ -673,6 +679,6 @@ export default function BowlsPage() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

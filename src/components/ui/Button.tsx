@@ -1,7 +1,42 @@
 "use client";
 
 import React from "react";
-import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+const MiniBowlLoader = ({ className = "w-5 h-5 mr-2" }) => (
+  <motion.svg 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2"
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={`${className} overflow-visible inline-block`}
+    animate={{ scale: [1, 1.1, 1] }}
+    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+  >
+    <motion.path 
+      d="M12 4v4" 
+      initial={{ opacity: 0, y: 0 }}
+      animate={{ opacity: [0, 1, 0], y: [0, -2, -4] }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+    />
+    <motion.path 
+      d="M8 6v3" 
+      initial={{ opacity: 0, y: 0 }}
+      animate={{ opacity: [0, 1, 0], y: [0, -2, -4] }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "linear", delay: 0.5 }}
+    />
+    <motion.path 
+      d="M16 6v3" 
+      initial={{ opacity: 0, y: 0 }}
+      animate={{ opacity: [0, 1, 0], y: [0, -2, -4] }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "linear", delay: 1 }}
+    />
+    <path d="M2 13h20" />
+    <path d="M4 13c0 5.5 3.6 10 8 10s8-4.5 8-10" fill="currentColor" fillOpacity="0.1" />
+  </motion.svg>
+);
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "inverted" | "outlined";
@@ -35,7 +70,7 @@ export default function Button({
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+        <MiniBowlLoader className="w-5 h-5 mr-2" />
       ) : null}
       {children}
     </button>

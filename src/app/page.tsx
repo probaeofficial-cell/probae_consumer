@@ -148,14 +148,6 @@ export default async function LandingPage() {
           <OptimizingSection />
 
         </main>
-        
-        {/* FOOTER */}
-        <footer className="bg-transparent pt-12 pb-24 md:pb-8 px-6 text-center border-t border-gray-200/50">
-          <p className="text-[9px] md:text-xs text-gray-400 font-bold tracking-[0.2em] uppercase">
-            © 2026 PROBAE INITIATIVE INC. // ACCESS RESTRICTED.
-          </p>
-        </footer>
-
         <BottomNav />
       </div>
     </div>
