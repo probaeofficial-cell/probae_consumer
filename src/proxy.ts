@@ -5,8 +5,13 @@ import * as jose from "jose";
 export async function proxy(request: NextRequest) {
   const adminToken = request.cookies.get("admin_token")?.value;
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/admin");
-
+  const isSetupRoute = request.nextUrl.pathname === "/api/admin/setup";
   const isLoginPage = request.nextUrl.pathname === "/admin/login";
+
+  // Bypass auth for the setup endpoint
+  if (isSetupRoute) {
+    return NextResponse.next();
+  }
 
   if (!adminToken) {
     if (isApiRoute) {

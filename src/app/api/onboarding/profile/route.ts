@@ -15,27 +15,43 @@ function calculateCalorieProfile(data: any) {
   const weight = Number(data.weight);
   const height = Number(data.height);
   const age = Number(data.age);
-  const isMale = data.sex !== 'Female';
+  const isMale = data.sex === 'Male';
 
-  // Mifflin-St Jeor BMR
-  let bmr = (10 * weight) + (6.25 * height) - (5 * age);
-  bmr += isMale ? 5 : -161;
+  // 1. Calculate BMR (Mifflin-St Jeor)
+  let bmr;
+  if (isMale) {
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+  } else {
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+  }
 
-  // Activity Multiplier
-  let multiplier = 1.2;
+  // 2. Activity Multiplier
+  let activityMultiplier = 1.2; // Default to sedentary
   switch (data.activityLevel) {
-    case 'Lightly Active': multiplier = 1.375; break;
-    case 'Active': multiplier = 1.55; break;
-    case 'Very Active': multiplier = 1.725; break;
+    case 'Sedentary': activityMultiplier = 1.2; break;
+    case 'Lightly Active': activityMultiplier = 1.375; break;
+    case 'Active': activityMultiplier = 1.55; break;
+    case 'Very Active': activityMultiplier = 1.725; break;
+    case 'Athlete': activityMultiplier = 1.9; break;
   }
   
-  let tdee = bmr * multiplier;
+  // 3. Get TDEE
+  let tdee = bmr * activityMultiplier;
 
-  // Goal adjustment
-  if (data.goal === 'Weight Loss') tdee -= 500;
-  else if (data.goal === 'Muscle Gain') tdee += 300;
+  // 4. Goal Adjustment
+  switch(data.goal) {
+      case 'Weight Loss':
+          tdee = tdee - 500;
+          break;
+      case 'Muscle Gain':
+          tdee = tdee + 300;
+          break;
+      default:
+          // Maintain Weight
+          break;
+  }
 
-  // Ensure minimums
+  // Ensure minimums for safety
   if (isMale && tdee < 1500) tdee = 1500;
   if (!isMale && tdee < 1200) tdee = 1200;
 
