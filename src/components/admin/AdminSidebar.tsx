@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   LogOut,
   Layers,
+  Shield,
   ChevronsLeft,
   ChevronsRight
 } from "lucide-react";
@@ -43,6 +44,7 @@ export default function AdminSidebar() {
     { name: "Plan Tiers", href: "/admin/tiers", icon: Layers },
     { name: "Subscriptions", href: "/admin/subscriptions", icon: ShoppingCart },
     { name: "Customers", href: "/admin/customers", icon: Users },
+    { name: "Team", href: "/admin/team", icon: Shield },
   ];
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
