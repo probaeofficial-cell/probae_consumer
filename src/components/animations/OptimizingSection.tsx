@@ -34,7 +34,7 @@ export default function OptimizingSection() {
         <h1 className="font-extrabold text-[clamp(2.5rem,8vw,10rem)] leading-[0.9] tracking-tighter text-center w-full uppercase font-headline text-[#F5F5F5]">
           STOP DIETING.
         </h1>
-        <h1 className="font-extrabold text-[clamp(2.5rem,8vw,10rem)] leading-[0.9] tracking-tighter text-center w-full uppercase font-headline text-[#4CAF50] mb-12">
+        <h1 className="font-extrabold text-[clamp(2.5rem,8vw,10rem)] leading-[0.9] tracking-tighter text-center w-full uppercase font-headline text-[#6a0fad] mb-12">
           START OPTIMIZING.
         </h1>
         

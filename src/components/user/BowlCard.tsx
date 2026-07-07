@@ -111,7 +111,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
           {/* Price Footer */}
           <div className="pt-4 border-t border-gray-100 flex justify-between items-center shrink-0">
             <span className="text-sm text-gray-500 font-medium">Est. Total</span>
-            <span className="font-bold text-[#F97316] text-xl md:text-2xl">${bowl.basePrice.toFixed(2)}</span>
+            <span className="font-bold text-[#F97316] text-xl md:text-2xl">₹{bowl.basePrice.toFixed(2)}</span>
           </div>
 
         </div>

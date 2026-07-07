@@ -53,8 +53,7 @@ export default function BowlListItem({ bowl, onClick }: BowlListItemProps) {
 
       {/* Price & Add */}
       <div className="flex flex-col items-end justify-between shrink-0 h-full py-1">
-        <span className="font-bold text-[#8B5CF6] text-base">
-          ${bowl.basePrice.toFixed(2)}
+        <span className="font-bold text-[#8B5CF6] text-base">₹{bowl.basePrice.toFixed(2)}
         </span>
         <button className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-[#8B5CF6] hover:bg-[#8B5CF6] hover:text-white transition-colors mt-auto">
           <Plus className="w-4 h-4" />

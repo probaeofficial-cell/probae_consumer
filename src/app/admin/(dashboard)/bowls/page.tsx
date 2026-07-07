@@ -12,6 +12,8 @@ interface Bowl {
   code: string;
   category: string;
   baseCalories: number;
+  rawMaterialCost: number;
+  fixedCost: number;
   basePrice: number;
   baseWeight: number;
   imageId: {
@@ -57,7 +59,7 @@ export default function BowlsPage() {
   };
 
   const [newBowl, setNewBowl] = useState({
-    name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+    name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
     macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
   });
 
@@ -150,7 +152,8 @@ export default function BowlsPage() {
         body: JSON.stringify({
           ...newBowl,
           baseCalories: Number(newBowl.baseCalories),
-          basePrice: Number(newBowl.basePrice),
+          rawMaterialCost: Number(newBowl.rawMaterialCost),
+          fixedCost: Number(newBowl.fixedCost),
           baseWeight: Number(newBowl.baseWeight),
           macros: {
             protein: Number(newBowl.macros.protein),
@@ -164,7 +167,7 @@ export default function BowlsPage() {
         setIsCreateModalOpen(false);
         setEditingBowlId(null);
         setNewBowl({
-          name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+          name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
           macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
         });
         fetchBowls();
@@ -233,7 +236,7 @@ export default function BowlsPage() {
         <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
           setEditingBowlId(null);
           setNewBowl({
-            name: "", code: "", category: "Core", baseCalories: 0, basePrice: 0, baseWeight: 0,
+            name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
             macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
           });
           setIsCreateModalOpen(true);
@@ -252,7 +255,7 @@ export default function BowlsPage() {
             <div className="col-span-3">Name & Code</div>
             <div className="col-span-2">Category</div>
             <div className="col-span-2">Base Calories</div>
-            <div className="col-span-2">Base Price</div>
+            <div className="col-span-2">Total Price</div>
             <div className="col-span-1 text-right">Actions</div>
           </div>
 
@@ -311,7 +314,7 @@ export default function BowlsPage() {
                     </div>
                   </div>
                   <div className="col-span-2 text-sm text-gray-500 font-medium">{bowl.baseCalories} <span className="text-gray-400 font-normal">kcal</span></div>
-                  <div className="col-span-2 text-sm text-gray-900 font-semibold">${bowl.basePrice.toFixed(2)}</div>
+                  <div className="col-span-2 text-sm text-gray-900 font-semibold">₹{bowl.basePrice.toFixed(2)}</div>
                   <div className="col-span-1 text-right flex justify-end">
                     <Button 
                       variant="inverted" 
@@ -439,8 +442,11 @@ export default function BowlsPage() {
                     )}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-3xl font-bold text-primary tracking-tight">${selectedBowl.basePrice.toFixed(2)}</p>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mt-1">Base Price</p>
+                    <p className="text-3xl font-bold text-primary tracking-tight">₹{selectedBowl.basePrice.toFixed(2)}</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mt-1">Total Price</p>
+                    <p className="text-[10px] font-semibold text-gray-400 mt-2">
+                      Raw: ₹{selectedBowl.rawMaterialCost?.toFixed(2) || '0.00'} | Fixed: ₹{selectedBowl.fixedCost?.toFixed(2) || '0.00'}
+                    </p>
                   </div>
                 </div>
                 
@@ -516,7 +522,8 @@ export default function BowlsPage() {
                   code: selectedBowl.code || "",
                   category: Array.isArray(selectedBowl.category) ? selectedBowl.category[0] : selectedBowl.category,
                   baseCalories: selectedBowl.baseCalories,
-                  basePrice: selectedBowl.basePrice,
+                  rawMaterialCost: selectedBowl.rawMaterialCost || 0,
+                  fixedCost: selectedBowl.fixedCost || 0,
                   baseWeight: selectedBowl.baseWeight,
                   macros: selectedBowl.macros,
                   micros: selectedBowl.micros ? selectedBowl.micros.join(", ") : "",
@@ -587,9 +594,20 @@ export default function BowlsPage() {
                       )}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Base Price ($)</label>
-                    <input required type="number" step="0.01" value={newBowl.basePrice} onChange={e => setNewBowl({...newBowl, basePrice: Number(e.target.value)})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="0.00" />
+                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Raw Material Cost (₹)</label>
+                      <input required type="number" step="0.01" value={newBowl.rawMaterialCost} onChange={e => setNewBowl({...newBowl, rawMaterialCost: Number(e.target.value)})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Fixed Cost (₹)</label>
+                      <input required type="number" step="0.01" value={newBowl.fixedCost} onChange={e => setNewBowl({...newBowl, fixedCost: Number(e.target.value)})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="0.00" />
+                    </div>
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Total Price (Calculated)</label>
+                    <div className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 font-semibold">₹{(Number(newBowl.rawMaterialCost || 0) + Number(newBowl.fixedCost || 0)).toFixed(2)}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Base Calories <span className="font-normal text-gray-400 ml-1">(kcal)</span></label>

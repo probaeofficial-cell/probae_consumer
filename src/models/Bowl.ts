@@ -5,6 +5,8 @@ export interface IBowl extends Document {
   code: string;
   imageId?: mongoose.Types.ObjectId;
   baseCalories: number;
+  rawMaterialCost: number;
+  fixedCost: number;
   basePrice: number;
   baseWeight: number;
   category: string;
@@ -25,6 +27,8 @@ const BowlSchema: Schema = new Schema({
   code: { type: String, required: true, unique: true },
   imageId: { type: Schema.Types.ObjectId, ref: "Image" },
   baseCalories: { type: Number, required: true },
+  rawMaterialCost: { type: Number, required: true, default: 0 },
+  fixedCost: { type: Number, required: true, default: 0 },
   basePrice: { type: Number, required: true },
   baseWeight: { type: Number, required: true },
   category: { type: String, required: true, enum: ["Core", "Pro", "Performance"] },

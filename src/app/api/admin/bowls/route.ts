@@ -23,6 +23,10 @@ export async function POST(request: Request) {
       delete body.imageId;
     }
 
+    if (body.rawMaterialCost !== undefined && body.fixedCost !== undefined) {
+      body.basePrice = Number(body.rawMaterialCost) + Number(body.fixedCost);
+    }
+
     const bowl = await Bowl.create(body);
     return NextResponse.json({ success: true, bowl }, { status: 201 });
   } catch (error) {

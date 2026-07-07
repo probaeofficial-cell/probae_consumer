@@ -18,69 +18,98 @@ function calculateCalorieProfile(data: any) {
   const isMale = data.sex === 'Male';
 
   // 1. Calculate BMR (Mifflin-St Jeor)
-  let bmr;
-  if (isMale) {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-  } else {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
-  }
+  let bmr =
+    (10 * weight) +
+    (6.25 * height) -
+    (5 * age) +
+    (isMale ? 5 : -161);
 
   // 2. Activity Multiplier
-  let activityMultiplier = 1.2; // Default to sedentary
+  let activityMultiplier = 1.2;
+
   switch (data.activityLevel) {
-    case 'Sedentary': activityMultiplier = 1.2; break;
-    case 'Lightly Active': activityMultiplier = 1.375; break;
-    case 'Active': activityMultiplier = 1.55; break;
-    case 'Very Active': activityMultiplier = 1.725; break;
-    case 'Athlete': activityMultiplier = 1.9; break;
+    case 'Sedentary':
+      activityMultiplier = 1.2;
+      break;
+    case 'Lightly Active':
+      activityMultiplier = 1.375;
+      break;
+    case 'Active':
+      activityMultiplier = 1.55;
+      break;
+    case 'Very Active':
+      activityMultiplier = 1.725;
+      break;
+    case 'Athlete':
+      activityMultiplier = 1.9;
+      break;
   }
-  
-  // 3. Get TDEE
+
+  // 3. Calculate TDEE
   let tdee = bmr * activityMultiplier;
 
-  // 4. Goal Adjustment
-  switch(data.goal) {
-      case 'Weight Loss':
-          tdee = tdee - 500;
-          break;
-      case 'Muscle Gain':
-          tdee = tdee + 300;
-          break;
-      default:
-          // Maintain Weight
-          break;
+  // 4. Adjust calories based on goal
+  switch (data.goal) {
+    case 'Weight Loss':
+      tdee -= 500;
+      break;
+
+    case 'Muscle Gain':
+      tdee += 300;
+      break;
+
+    // Maintain Weight -> no change
   }
 
-  // Ensure minimums for safety
+  // 5. Minimum calorie intake
   if (isMale && tdee < 1500) tdee = 1500;
   if (!isMale && tdee < 1200) tdee = 1200;
 
   tdee = Math.round(tdee);
 
-  // Macros calculation
-  // Protein: ~2g per kg for active/muscle gain, 1.6g otherwise
-  let proteinFactor = 1.8;
-  if (data.goal === 'Muscle Gain' || data.activityLevel === 'Very Active') proteinFactor = 2.2;
-  let protein = Math.round(weight * proteinFactor);
+  // -------------------------
+  // Macronutrients
+  // -------------------------
 
-  // Fat: ~0.8g per kg
-  let fat = Math.round(weight * 0.8);
+  // Protein (g/kg)
+  let proteinFactor = 1.6;
 
-  // Carbs: Remainder of calories
-  const proteinCals = protein * 4;
-  const fatCals = fat * 9;
-  let remainingCals = tdee - (proteinCals + fatCals);
-  let carbs = Math.max(0, Math.round(remainingCals / 4));
+  switch (data.goal) {
+    case 'Weight Loss':
+      proteinFactor = 2.0;
+      break;
 
-  // Fiber: ~14g per 1000 kcal
-  let fiber = Math.round((tdee / 1000) * 14);
+    case 'Muscle Gain':
+      proteinFactor = 2.2;
+      break;
+
+    // Maintain Weight
+    default:
+      proteinFactor = 1.6;
+  }
+
+  const protein = Math.round(weight * proteinFactor);
+
+  // Fat = 25% of total calories
+  const fat = Math.round((tdee * 0.25) / 9);
+
+  const proteinCalories = protein * 4;
+  const fatCalories = fat * 9;
+
+  const carbs = Math.max(
+    0,
+    Math.round((tdee - proteinCalories - fatCalories) / 4)
+  );
+
+  // Fiber = 14 g per 1000 kcal
+  const fiber = Math.round((tdee / 1000) * 14);
 
   return {
     total: tdee,
     protein,
     carbs,
     fat,
-    fiber
+    fiber,
   };
 }
 

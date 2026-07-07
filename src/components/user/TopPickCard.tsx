@@ -50,8 +50,7 @@ export default function TopPickCard({ bowl, onClick, index }: TopPickCardProps) 
             <span className="font-bold text-gray-800 text-lg">{bowl.baseCalories}</span>
             <span className="text-gray-500 text-xs font-medium font-mono">kcal</span>
           </div>
-          <div className="font-bold text-primary text-lg">
-            ${bowl.basePrice.toFixed(2)}
+          <div className="font-bold text-primary text-lg">₹{bowl.basePrice.toFixed(2)}
           </div>
         </div>
       </div>

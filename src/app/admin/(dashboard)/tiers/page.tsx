@@ -352,11 +352,11 @@ export default function TiersPage() {
                   <div className="col-span-2 flex flex-col">
                     {tier.discountPrice > 0 ? (
                       <>
-                        <span className="text-sm font-bold text-green-600">${tier.discountPrice.toFixed(2)}</span>
-                        <span className="text-xs text-gray-400 line-through">${tier.totalPrice?.toFixed(2) || '0.00'}</span>
+                        <span className="text-sm font-bold text-green-600">₹{tier.discountPrice.toFixed(2)}</span>
+                        <span className="text-xs text-gray-400 line-through">₹{tier.totalPrice?.toFixed(2) || '0.00'}</span>
                       </>
                     ) : (
-                      <span className="text-sm font-bold text-gray-900">${tier.totalPrice?.toFixed(2) || '0.00'}</span>
+                      <span className="text-sm font-bold text-gray-900">₹{tier.totalPrice?.toFixed(2) || '0.00'}</span>
                     )}
                   </div>
                   <div className="col-span-2 text-right flex items-center justify-end gap-3">
@@ -434,7 +434,7 @@ export default function TiersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Discount Price ($)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Discount Price (₹)</label>
                 <input type="number" step="0.01" min="0" value={newTier.discountPrice || ''} onChange={e => setNewTier({...newTier, discountPrice: Number(e.target.value)})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="Optional" />
               </div>
             </div>
@@ -467,12 +467,12 @@ export default function TiersPage() {
               <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Calculated Total</p>
-                  <p className="text-2xl font-black text-gray-900">${totalPrice.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-gray-900">₹{totalPrice.toFixed(2)}</p>
                 </div>
                 {newTier.discountPrice > 0 && (
                   <div className="text-right">
                     <p className="text-xs text-green-600 uppercase tracking-wider font-bold mb-1">Final Price</p>
-                    <p className="text-2xl font-black text-green-600">${newTier.discountPrice.toFixed(2)}</p>
+                    <p className="text-2xl font-black text-green-600">₹{newTier.discountPrice.toFixed(2)}</p>
                   </div>
                 )}
               </div>
@@ -520,7 +520,7 @@ export default function TiersPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
-                            <p className="text-xs text-gray-500">${item.basePrice?.toFixed(2) || '0.00'}</p>
+                            <p className="text-xs text-gray-500">₹{item.basePrice?.toFixed(2) || '0.00'}</p>
                           </div>
                           <button 
                             type="button" 
@@ -575,7 +575,7 @@ export default function TiersPage() {
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-gray-900 truncate">{bowl.name}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <p className="text-xs text-primary font-bold">${bowl.basePrice?.toFixed(2) || '0.00'}</p>
+                                  <p className="text-xs text-primary font-bold">₹{bowl.basePrice?.toFixed(2) || '0.00'}</p>
                                   <p className="text-xs text-gray-500">{bowl.baseCalories} kcal</p>
                                 </div>
                               </div>
@@ -700,9 +700,9 @@ export default function TiersPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Price</p>
-                    <p className="text-gray-900 font-medium">${selectedTier.totalPrice?.toFixed(2) || '0.00'}</p>
+                    <p className="text-gray-900 font-medium">₹{selectedTier.totalPrice?.toFixed(2) || '0.00'}</p>
                     {selectedTier.discountPrice > 0 && (
-                      <p className="text-xs text-green-600 font-bold">Discount: ${selectedTier.discountPrice.toFixed(2)}</p>
+                      <p className="text-xs text-green-600 font-bold">Discount: ₹{selectedTier.discountPrice.toFixed(2)}</p>
                     )}
                   </div>
                 </div>
@@ -730,7 +730,7 @@ export default function TiersPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">{bowl.name}</p>
-                          <p className="text-xs text-gray-500 font-medium">${bowl.basePrice?.toFixed(2) || '0.00'}</p>
+                          <p className="text-xs text-gray-500 font-medium">₹{bowl.basePrice?.toFixed(2) || '0.00'}</p>
                         </div>
                       </div>
                     ))}

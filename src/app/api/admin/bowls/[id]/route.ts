@@ -45,6 +45,10 @@ export async function PATCH(
       delete body.imageId;
     }
 
+    if (body.rawMaterialCost !== undefined && body.fixedCost !== undefined) {
+      body.basePrice = Number(body.rawMaterialCost) + Number(body.fixedCost);
+    }
+
     const updatedBowl = await Bowl.findByIdAndUpdate(id, body, { new: true });
     
     if (!updatedBowl) {
