@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap');
+
 @import "tailwindcss";
 
 :root {
@@ -15,8 +15,8 @@
   --color-primary: var(--color-primary);
   --color-secondary: var(--color-secondary);
   --color-tertiary: var(--color-tertiary);
-  --font-sans: "DM Sans", sans-serif;
-  --font-headline: "Syne", sans-serif;
+  --font-sans: var(--font-poppins), sans-serif;
+  --font-headline: var(--font-poppins), sans-serif;
 }
 
 

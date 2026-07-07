@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Sun } from "lucide-react";
+import { Sun, Utensils, Moon } from "lucide-react";
 
 interface BowlCardProps {
   bowl: any;
@@ -19,25 +19,24 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
   const isBreakfast = bowl.mealTypes?.includes('B');
   const isLunch = bowl.mealTypes?.includes('L');
   
-  // "if breakfas use purple if lunch use green else dinner use purple" 
-  // (using orange for dinner to match screenshot aesthetic, but will stick to purple/green/orange based on logic)
-  let topColor = "bg-[#F97316]"; // Orange default
-  let textColor = "text-[#F97316]";
-  let borderColor = "border-[#F97316]";
+  let topColor = "bg-primary";
+  let textColor = "text-primary";
+  let borderColor = "border-primary";
+  let phaseLabel = "DINNER";
+  let Icon = Moon;
   
   if (isBreakfast) {
-    topColor = "bg-[#8B5CF6]"; // Purple
-    textColor = "text-[#8B5CF6]";
-    borderColor = "border-[#8B5CF6]";
+    topColor = "bg-tertiary";
+    textColor = "text-tertiary";
+    borderColor = "border-tertiary";
+    phaseLabel = "BREAKFAST";
+    Icon = Sun;
   } else if (isLunch) {
-    topColor = "bg-[#10B981]"; // Green
-    textColor = "text-[#10B981]";
-    borderColor = "border-[#10B981]";
-  } else {
-    // If dinner, prompt said purple, but screenshot shows orange. I'll use orange/purple
-    topColor = "bg-[#F97316]"; 
-    textColor = "text-[#F97316]";
-    borderColor = "border-[#F97316]";
+    topColor = "bg-secondary";
+    textColor = "text-secondary";
+    borderColor = "border-secondary";
+    phaseLabel = "LUNCH";
+    Icon = Utensils;
   }
 
   return (
@@ -50,14 +49,14 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
         style={{ transformStyle: "preserve-3d" }}
       >
         {/* FRONT FACE (New Image Design) */}
-        <div className="absolute inset-0 backface-hidden bg-[#18181b] rounded-[24px] flex flex-col shadow-xl overflow-hidden border border-gray-800">
+        <div className="absolute inset-0 backface-hidden bg-[#3F3F46] rounded-[24px] flex flex-col shadow-xl overflow-hidden border border-gray-800">
           
           {/* Top Banner */}
           <div className={`w-full h-20 ${topColor} flex justify-between items-center px-6 shrink-0 z-10`}>
             <span className="text-gray-900 text-sm font-bold tracking-[0.15em] uppercase">
-              PHASE {formattedIndex}
+              {phaseLabel}
             </span>
-            <Sun className="w-5 h-5 text-gray-900" strokeWidth={2.5} />
+            <Icon className="w-5 h-5 text-gray-900" strokeWidth={2.5} />
           </div>
 
           {/* Image Area */}
@@ -69,11 +68,11 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
               className="object-cover"
             />
             {/* Gradient Overlay mapping image to dark footer */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#18181b] via-[#18181b]/50 to-transparent top-1/2"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#3F3F46] via-[#3F3F46]/50 to-transparent top-1/2"></div>
           </div>
 
           {/* Footer Area */}
-          <div className="w-full h-24 bg-[#18181b] flex justify-between items-center px-6 shrink-0 z-10 relative">
+          <div className="w-full h-24 bg-[#3F3F46] flex justify-between items-center px-6 shrink-0 z-10 relative">
             <span className="text-white text-xl md:text-2xl font-light tracking-wide uppercase line-clamp-1 mr-4">
               {bowl.name}
             </span>
@@ -86,7 +85,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
         {/* BACK FACE (Light Theme - Details) */}
         <div className="absolute inset-0 backface-hidden bg-white rounded-[24px] p-6 shadow-xl flex flex-col rotate-y-180 border border-gray-100 overflow-hidden">
           
-          <h4 className="font-bold text-gray-900 text-xl mb-8 text-center border-b border-gray-100 pb-4 shrink-0">{bowl.name}</h4>
+          <h4 className="font-bold text-gray-900 text-xl mb-4 text-center border-b border-gray-100 pb-3 shrink-0">{bowl.name}</h4>
           
           {/* Macros */}
           <div className="grid grid-cols-2 gap-4 flex-1 content-start">
@@ -102,16 +101,22 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Fats</span>
               <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.fat || 0}g</span>
             </div>
-            <div className="bg-gray-100 rounded-2xl p-4 flex flex-col items-center justify-center">
-              <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-2">Cals</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.baseCalories}</span>
+            <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
+              <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Fiber</span>
+              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.fiber || 0}g</span>
             </div>
           </div>
 
+          {/* Calories Large Display */}
+          <div className="mt-4 mb-3 flex flex-col items-center justify-center bg-gray-50 rounded-2xl py-3 border border-gray-100 shrink-0">
+            <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-1">Calories</span>
+            <span className="font-black text-gray-900 text-3xl">{bowl.baseCalories} <span className="text-base text-gray-400 font-medium">kcal</span></span>
+          </div>
+
           {/* Price Footer */}
-          <div className="pt-4 border-t border-gray-100 flex justify-between items-center shrink-0">
+          <div className="pt-3 border-t border-gray-100 flex justify-between items-center shrink-0">
             <span className="text-sm text-gray-500 font-medium">Est. Total</span>
-            <span className="font-bold text-[#F97316] text-xl md:text-2xl">₹{bowl.basePrice.toFixed(2)}</span>
+            <span className="font-bold text-[#F97316] text-xl md:text-2xl">₹{(bowl.basePrice || 0).toFixed(2)}</span>
           </div>
 
         </div>

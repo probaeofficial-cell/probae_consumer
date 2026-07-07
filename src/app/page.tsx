@@ -93,7 +93,7 @@ export default async function LandingPage() {
               {/* Stats Row */}
               <FadeInUp delay={0.4} className="w-full flex justify-between items-center px-2 py-4 md:py-6 border-t border-gray-200/60 md:gap-8 md:justify-start">
                 <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-[#8B5CF6] font-bold text-lg md:text-2xl">500+</span>
+                  <span className="text-[#8B5CF6] font-bold text-lg md:text-2xl">50+</span>
                   <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Bowls<br/>Crafted</span>
                 </div>
                 <div className="h-8 md:h-12 w-px bg-gray-200/60"></div>
