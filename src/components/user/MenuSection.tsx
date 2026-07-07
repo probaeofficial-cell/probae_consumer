@@ -13,7 +13,7 @@ interface MenuSectionProps {
 }
 
 export default function MenuSection({ bowls }: MenuSectionProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>("Best Sellers");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedBowl, setSelectedBowl] = useState<any | null>(null);
   const [itemsToShow, setItemsToShow] = useState(5);
 
@@ -23,11 +23,11 @@ export default function MenuSection({ bowls }: MenuSectionProps) {
   };
 
   // Categories for the pills
-  const categories = ["Best Sellers", "Breakfast", "Lunch", "Dinner"];
+  const categories = ["All", "Breakfast", "Lunch", "Dinner"];
 
   // Filter logic (simplified for now based on MealTypes or just showing a subset)
   const filteredBowls = bowls.filter(bowl => {
-    if (selectedCategory === "Best Sellers") return true; // Show all for Best Sellers as placeholder
+    if (selectedCategory === "All") return true; // Show all for Best Sellers as placeholder
     if (selectedCategory === "Breakfast") return bowl.mealTypes?.includes('B');
     if (selectedCategory === "Lunch") return bowl.mealTypes?.includes('L');
     if (selectedCategory === "Dinner") return bowl.mealTypes?.includes('D');
