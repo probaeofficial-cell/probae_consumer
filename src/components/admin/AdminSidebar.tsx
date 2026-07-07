@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
@@ -39,13 +39,37 @@ export default function AdminSidebar() {
     { name: "Customers", href: "/admin/customers", icon: Users },
   ];
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Listen for the custom toggle event from AdminHeader
+  useEffect(() => {
+    const handleToggle = () => setIsMobileOpen(prev => !prev);
+    window.addEventListener("toggle-admin-sidebar", handleToggle);
+    return () => window.removeEventListener("toggle-admin-sidebar", handleToggle);
+  }, []);
+
   return (
-    <aside className={`bg-[#222222] text-gray-300 flex flex-col h-screen border-r border-[#333333] shrink-0 transition-all duration-300 relative ${isCollapsed ? "w-20" : "w-64"}`}>
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        bg-[#222222] text-gray-300 flex flex-col h-screen border-r border-[#333333] shrink-0 transition-all duration-300 
+        fixed inset-y-0 left-0 z-50 md:relative
+        ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        ${isCollapsed ? "md:w-20 w-64" : "w-64"}
+      `}>
       
       {/* Floating Toggle Button */}
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3.5 top-7 z-50 bg-[#222222] text-gray-400 hover:text-white border border-[#444444] rounded-full p-1 transition-colors duration-200 focus:outline-none flex items-center justify-center shadow-lg"
+        className="hidden md:flex absolute -right-3.5 top-7 z-50 bg-[#222222] text-gray-400 hover:text-white border border-[#444444] rounded-full p-1 transition-colors duration-200 focus:outline-none items-center justify-center shadow-lg"
       >
         {isCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
       </button>
@@ -89,6 +113,7 @@ export default function AdminSidebar() {
             <Link 
               key={item.name}
               href={item.href}
+              onClick={() => setIsMobileOpen(false)}
               title={isCollapsed ? item.name : undefined}
               className={`flex items-center rounded-xl transition-colors duration-200 ${isCollapsed ? "justify-center px-0 py-3" : "px-4 py-3"} ${
                 isActive 
@@ -140,5 +165,6 @@ export default function AdminSidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }
