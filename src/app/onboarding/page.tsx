@@ -47,6 +47,7 @@ export default function OnboardingPage() {
     planFrequency: "5 DAYS",
     mealSlots: ["LUNCH"] as string[],
     mealRatios: { "LUNCH": 100 } as Record<string, number>,
+    purchasedCalories: 0,
   });
 
   const balanceMealRatios = (slots: string[]) => {
@@ -201,6 +202,10 @@ export default function OnboardingPage() {
       const data = await res.json();
       if (data.success) {
         setCalorieProfile(data.calorieProfile);
+        setFormData(prev => ({
+          ...prev,
+          purchasedCalories: prev.purchasedCalories > 0 ? prev.purchasedCalories : data.calorieProfile.total
+        }));
         setStep(3); // Go to Calorie Profile
       }
     } catch (err) {
@@ -355,13 +360,15 @@ export default function OnboardingPage() {
   const getDynamicCalsPerMeal = (typeCode: string = '') => {
     if (!calorieProfile || formData.mealSlots.length === 0) return 0;
     const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
-    return Math.round(calorieProfile.total * ratio);
+    const totalToDistribute = formData.purchasedCalories || calorieProfile.total;
+    return Math.round(totalToDistribute * ratio);
   };
 
   const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat' | 'fiber', typeCode: string = '') => {
     if (!calorieProfile || formData.mealSlots.length === 0) return 0;
     const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
-    return Math.round(calorieProfile[macro] * ratio);
+    const scaleFactor = (formData.purchasedCalories || calorieProfile.total) / calorieProfile.total;
+    return Math.round(calorieProfile[macro] * scaleFactor * ratio);
   };
 
   const getDynamicBowlStats = (bowl: any, typeCode: string = '') => {
@@ -379,7 +386,9 @@ export default function OnboardingPage() {
     return {
       weight: Math.round(bowl.baseWeight * scale),
       calories: Math.round(bowl.baseCalories * scale),
-      price: Math.round(bowl.basePrice * scale),
+      price: bowl.rawMaterialCost > 0 
+        ? Math.round((bowl.rawMaterialCost * scale) + (bowl.fixedCost || 0))
+        : Math.round((bowl.basePrice || 0) * scale),
       macros: {
         protein: Math.round((bowl.macros?.protein || 0) * scale),
         carbs: Math.round((bowl.macros?.carbs || 0) * scale),
@@ -1065,6 +1074,42 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
+                {/* Calories to Purchase */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Calories to Purchase</h3>
+                  <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 flex flex-col items-center shadow-inner">
+                    <p className="text-gray-400 text-sm text-center mb-6 leading-relaxed">
+                      Your goal requires <span className="text-white font-bold">{calorieProfile?.total || 0} kcal</span> daily. 
+                      Select how many calories you'd like to purchase from us.
+                    </p>
+                    <div className="flex items-center justify-center gap-4 w-full">
+                      <button 
+                        type="button"
+                        onClick={() => updateField("purchasedCalories", Math.max(500, (formData.purchasedCalories || 2000) - 100))}
+                        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white flex items-center justify-center hover:bg-gray-700 transition-colors shadow-md text-xl"
+                      >
+                        -
+                      </button>
+                      <div className="flex flex-col items-center w-32">
+                        <input 
+                          type="number" 
+                          value={formData.purchasedCalories || 0}
+                          onChange={(e) => updateField("purchasedCalories", parseInt(e.target.value) || 0)}
+                          className="w-full bg-transparent text-white text-4xl font-black font-mono text-center focus:outline-none placeholder-gray-700"
+                        />
+                        <span className="text-xs text-tertiary font-bold tracking-widest mt-1">KCAL</span>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => updateField("purchasedCalories", Math.min(6000, (formData.purchasedCalories || 2000) + 100))}
+                        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white flex items-center justify-center hover:bg-gray-700 transition-colors shadow-md text-xl"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Meal Slots */}
                 <div>
                   <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Meal Slots</h3>
@@ -1110,7 +1155,9 @@ export default function OnboardingPage() {
                         <div key={slotId} className="flex flex-col gap-2">
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-bold text-gray-300">{slotId}</span>
-                            <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">{formData.mealRatios?.[slotId] || 0}%</span>
+                            <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">
+                              {formData.mealRatios?.[slotId] || 0}% <span className="text-gray-400 text-xs ml-1 font-medium">({getDynamicCalsPerMeal(slotId)} kcal)</span>
+                            </span>
                           </div>
                           <input 
                             type="range" 

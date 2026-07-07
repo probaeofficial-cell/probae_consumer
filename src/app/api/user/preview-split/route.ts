@@ -35,7 +35,9 @@ export async function POST(request: Request) {
         name: bowl.name,
         assignedCalories: Math.round(targetCalories),
         calculatedWeight: Math.round(bowl.baseWeight * factor),
-        calculatedPrice: Number((bowl.basePrice * factor).toFixed(2)),
+        calculatedPrice: bowl.rawMaterialCost > 0
+          ? Number(((bowl.rawMaterialCost * factor) + (bowl.fixedCost || 0)).toFixed(2))
+          : Number((bowl.basePrice * factor).toFixed(2)),
         macros: {
           protein: Math.round(bowl.macros.protein * factor),
           carbs: Math.round(bowl.macros.carbs * factor),
