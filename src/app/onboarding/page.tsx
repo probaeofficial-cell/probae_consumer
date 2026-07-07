@@ -1038,6 +1038,16 @@ export default function OnboardingPage() {
               </div>
 
               <form onSubmit={handleContinueToStep5} className="max-w-xl mx-auto space-y-4">
+                <div className="relative w-full">
+                  {selectedPlan && (
+                    <div className="absolute -top-16 left-0 right-0 z-50">
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 p-4 rounded-xl text-sm mb-6 flex justify-between items-center shadow-lg backdrop-blur-md">
+                        <span>A plan is already selected.</span>
+                        <button type="button" onClick={() => setSelectedPlan(null)} className="font-bold underline hover:text-yellow-400">Clear Selection</button>
+                      </div>
+                    </div>
+                  )}
+                  <div className={`space-y-4 transition-all duration-300 ${selectedPlan ? 'pointer-events-none opacity-50 blur-[1px]' : ''}`}>
                 
                 {/* Plan Duration */}
                 <div className="flex flex-col items-center">
@@ -1178,6 +1188,8 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 )}
+                  </div>
+                </div>
 
                 <div className="pt-6 border-t border-gray-800/50 flex justify-end">
                   <button

@@ -20,6 +20,7 @@ interface CalculatedBowl {
   mealType?: string;
   inferredType?: string;
   ratio?: number;
+  selectedDip?: string;
 }
 
 interface Subscription {
@@ -33,6 +34,7 @@ interface Subscription {
     activityLevel: string;
     mealSlots: string[];
     mealRatios: Record<string, number>;
+    purchasedCalories?: number;
     calorieProfile: {
       total: number;
       protein: number;

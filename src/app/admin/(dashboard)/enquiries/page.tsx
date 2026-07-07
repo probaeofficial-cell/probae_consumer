@@ -144,7 +144,6 @@ export default function EnquiriesPage() {
                         {enq.status === "Pending" ? (
                           <Button 
                             variant="primary" 
-                            size="sm"
                             isLoading={updatingId === enq._id}
                             onClick={() => markAsResolved(enq._id)}
                             className="text-xs px-3 py-1.5 h-auto rounded-lg shadow-sm font-medium"

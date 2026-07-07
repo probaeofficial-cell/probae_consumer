@@ -141,7 +141,7 @@ export default function BowlsPage() {
     }
   };
 
-  const handleModalSubmit = async (e: React.FormEvent) => {
+  const handleModalSubmit = async (e: React.FormEvent, body: { micros: string[]; ingredients: string[]; dips: string[]; name: string; code: string; category: string; baseCalories: number; rawMaterialCost: number; fixedCost: number; baseWeight: number; macros: { protein: number; carbs: number; fat: number; fiber: number; }; mealTypes: string[]; imageId: string; isActive: boolean; }) => {
     e.preventDefault();
     setIsCreating(true);
     try {
@@ -169,7 +169,7 @@ export default function BowlsPage() {
         setEditingBowlId(null);
         setNewBowl({
           name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
-          macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+          macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", dips: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
         });
         fetchBowls();
         if (editingBowlId && selectedBowl && selectedBowl._id === editingBowlId) {
