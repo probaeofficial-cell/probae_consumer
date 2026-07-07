@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Salad } from "lucide-react";
 import { motion } from "framer-motion";
 import TopPickCard from "./TopPickCard";
 import BowlListItem from "./BowlListItem";
@@ -151,8 +151,12 @@ export default function MenuSection({ bowls }: MenuSectionProps) {
               )}
             </div>
           ) : (
-            <div className="py-12 flex flex-col items-center justify-center text-gray-400 text-sm flex-1">
-              No bowls found for this category.
+            <div className="w-full h-[350px] bg-white border border-gray-100 rounded-3xl flex flex-col items-center justify-center text-center p-8 shadow-sm mt-4">
+              <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mb-4 border border-purple-100/50">
+                <Salad className="w-8 h-8 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 tracking-tight">No Bowls Here!</h3>
+              <p className="text-sm text-gray-500 max-w-[250px]">We couldn't find any bowls in this category right now. Try selecting another one.</p>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import BottomNav from "@/components/user/BottomNav";
 import BowlCard from "@/components/user/BowlCard";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Utensils } from "lucide-react";
+import { ArrowRight, Utensils, Salad } from "lucide-react";
 import Bowl from "@/models/Bowl";
 import "@/models/Image";
 import connectToDatabase from "@/lib/db";
@@ -127,7 +127,7 @@ export default async function LandingPage() {
 
             {/* Horizontal Scroll on All Devices */}
             <div className="w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory px-8 md:px-12 pt-4 pb-12">
-              <div className="flex gap-6 md:gap-10 w-max">
+              <div className={`flex gap-6 md:gap-10 ${serializedBowls.length === 0 ? "w-full justify-center" : "w-max"}`}>
                 {serializedBowls.map((bowl, index) => (
                   <FadeInUp key={bowl._id} delay={index * 0.1} yOffset={20}>
                     <BowlCard bowl={bowl as any} index={index} />
@@ -136,8 +136,12 @@ export default async function LandingPage() {
                 
                 {/* Fallback if no bowls in DB */}
                 {serializedBowls.length === 0 && (
-                  <div className="w-[300px] h-[450px] bg-gray-100 rounded-3xl flex items-center justify-center text-gray-400">
-                    No bowls available
+                  <div className="w-[300px] h-[450px] bg-white border border-gray-100 rounded-3xl flex flex-col items-center justify-center text-center p-8 shadow-sm shrink-0">
+                    <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4 border border-orange-100/50">
+                      <Salad className="w-8 h-8 text-orange-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 tracking-tight">Fresh Bowls Brewing!</h3>
+                    <p className="text-sm text-gray-500">We're currently preparing our menu. Check back soon for our latest curated selections.</p>
                   </div>
                 )}
               </div>
