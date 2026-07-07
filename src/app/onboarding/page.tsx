@@ -16,6 +16,8 @@ export default function OnboardingPage() {
   const [isChartLoaded, setIsChartLoaded] = useState(false);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     if (step === 3) {
       const timer = setTimeout(() => setIsChartLoaded(true), 100);
       return () => clearTimeout(timer);
@@ -1023,7 +1025,7 @@ export default function OnboardingPage() {
               <form onSubmit={handleContinueToStep5} className="max-w-xl mx-auto space-y-4">
                 
                 {/* Plan Duration */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center">
                   <div className="relative flex p-1 bg-[#151515] rounded-full border border-gray-800/60 max-w-[280px] w-full">
                      {/* Sliding Pill */}
                      <div 
@@ -1033,6 +1035,10 @@ export default function OnboardingPage() {
                      <button type="button" onClick={() => updateField("planDuration", "WEEKLY")} className={`relative z-10 flex-1 py-3 text-xs font-bold tracking-widest rounded-full transition-colors duration-300 ${formData.planDuration === "WEEKLY" ? "text-white" : "text-gray-400 hover:text-white"}`}>WEEKLY</button>
                      <button type="button" onClick={() => updateField("planDuration", "MONTHLY")} className={`relative z-10 flex-1 py-3 text-xs font-bold tracking-widest rounded-full transition-colors duration-300 ${formData.planDuration === "MONTHLY" ? "text-white" : "text-gray-400 hover:text-white"}`}>MONTHLY</button>
                   </div>
+                  
+                  <div className="mt-3 px-3 py-1 bg-[#10B981]/10 border border-[#10B981] text-[#10B981] text-[10px] font-bold rounded-full uppercase tracking-widest transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                    Up to {formData.planDuration === "WEEKLY" ? "10%" : "15%"} Discount
+                  </div>
                 </div>
 
                 {/* Frequency */}
@@ -1041,7 +1047,11 @@ export default function OnboardingPage() {
                   <div className="relative flex p-1 bg-[#151515] rounded-2xl border border-gray-800/60">
                     {/* Sliding Pill */}
                     <div 
-                       className="absolute inset-y-1 left-1 w-[calc(33.333%-2.66px)] bg-[#4CAF50] rounded-xl transition-transform duration-300 ease-out shadow-[0_0_15px_rgba(76,175,80,0.3)]"
+                       className={`absolute inset-y-1 left-1 w-[calc(33.333%-2.66px)] rounded-xl transition-all duration-300 ease-out ${
+                         formData.planFrequency === "5 DAYS" ? "bg-[#4CAF50] shadow-[0_0_15px_rgba(76,175,80,0.3)]" :
+                         formData.planFrequency === "6 DAYS" ? "bg-[#EAB308] shadow-[0_0_15px_rgba(234,179,8,0.3)]" :
+                         "bg-[#F97316] shadow-[0_0_15px_rgba(249,115,22,0.3)]"
+                       }`}
                        style={{ 
                          transform: formData.planFrequency === "5 DAYS" ? "translateX(0)" : 
                                     formData.planFrequency === "6 DAYS" ? "translateX(100%)" : "translateX(200%)" 
