@@ -36,23 +36,33 @@ export async function POST(request: Request) {
       { new: true }
     );
 
-    // Ensure we create the Subscription
+    // Ensure we create or update the Subscription
     if (body.calculatedBowls && body.finalTotalPrice !== undefined) {
-      await Subscription.create({
-        user: user._id,
-        plan: body.selectedPlan,
-        selectedMealCombo: body.selectedMealCombo || "",
-        calculatedBowls: body.calculatedBowls,
-        finalTotalPrice: body.finalTotalPrice,
-        status: "active"
-      });
+      const existingSub = await Subscription.findOne({ user: user._id, status: "active" }).sort({ createdAt: -1 });
+      
+      if (existingSub) {
+        existingSub.plan = body.selectedPlan;
+        existingSub.selectedMealCombo = body.selectedMealCombo || "";
+        existingSub.calculatedBowls = body.calculatedBowls;
+        existingSub.finalTotalPrice = body.finalTotalPrice;
+        await existingSub.save();
+      } else {
+        await Subscription.create({
+          user: user._id,
+          plan: body.selectedPlan,
+          selectedMealCombo: body.selectedMealCombo || "",
+          calculatedBowls: body.calculatedBowls,
+          finalTotalPrice: body.finalTotalPrice,
+          status: "active"
+        });
 
-      // Emit a notification to the admin
-      await Notification.create({
-        message: `New user onboarded: ${user.name}`,
-        type: 'NEW_USER',
-        link: `/admin/customers?userId=${user._id}`
-      });
+        // Emit a notification to the admin
+        await Notification.create({
+          message: `New user onboarded: ${user.name}`,
+          type: 'NEW_USER',
+          link: `/admin/customers?userId=${user._id}`
+        });
+      }
     }
 
     return NextResponse.json({ success: true, message: "Checkout successful. We will connect with you.", data: user });

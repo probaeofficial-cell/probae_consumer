@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -16,6 +16,8 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isChartLoaded, setIsChartLoaded] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [customizedDips, setCustomizedDips] = useState<{[bowlId: string]: string}>({});
+  const [customizingBowl, setCustomizingBowl] = useState<any>(null);
 
   // Trigger chart animation
   useEffect(() => {
@@ -316,7 +318,8 @@ export default function OnboardingPage() {
                 mealType: bucket.type === 'B' ? 'Breakfast' : bucket.type === 'L' ? 'Lunch' : bucket.type === 'D' ? 'Dinner' : bucket.type,
                 ratio: getRatioForType(bucket.type),
                 macros: stats.macros,
-                micros: bowl.micros || []
+                micros: bowl.micros || [],
+                selectedDip: customizedDips[bowl._id] || (bowl.dips && bowl.dips.length === 1 ? bowl.dips[0] : undefined)
               });
             });
           }
@@ -1369,6 +1372,8 @@ export default function OnboardingPage() {
                         </div>
                       )}
 
+
+
                       {/* Sample Bowls Grid based on selected plan */}
                       {selectedPlan && plans.find(p => p._id === selectedPlan) && (
                         <div className="border-t border-gray-800/50 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1407,11 +1412,14 @@ export default function OnboardingPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                       {bowls.map((bowl: any) => (
                                         <div key={bowl._id} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 hover:border-gray-600 transition-colors">
-                                          <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden">
-                                            {/* Ideally this would be an image, but we'll leave a placeholder for now */}
-                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                              <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
-                                            </div>
+                                          <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden relative">
+                                            {bowl.imageId?.url ? (
+                                              <img src={bowl.imageId.url} alt={bowl.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
+                                              </div>
+                                            )}
                                           </div>
                                           
                                           {(() => {
@@ -1444,7 +1452,35 @@ export default function OnboardingPage() {
                                                     <p className="text-[10px] font-bold text-white">{stats.macros.fiber}g</p>
                                                   </div>
                                                 </div>
-                                                <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                                <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-3">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                                
+                                                {bowl.dips && bowl.dips.length > 1 && (
+                                                  <div className="mt-auto border-t border-gray-800/60 pt-3">
+                                                    <div className="flex items-center justify-between">
+                                                      <div className="flex flex-col">
+                                                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Dip Choice</span>
+                                                        <span className="text-xs text-white font-medium truncate max-w-[100px]">
+                                                          {customizedDips[bowl._id] || "Not Selected"}
+                                                        </span>
+                                                      </div>
+                                                      <button 
+                                                        type="button"
+                                                        onClick={() => setCustomizingBowl(bowl)}
+                                                        className="text-[10px] font-bold uppercase tracking-widest bg-[#FFD700] hover:bg-white text-black px-3 py-1.5 rounded transition-colors shadow-sm"
+                                                      >
+                                                        Customize
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                {bowl.dips && bowl.dips.length === 1 && (
+                                                  <div className="mt-auto border-t border-gray-800/60 pt-3">
+                                                    <div className="flex flex-col">
+                                                      <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Included Dip</span>
+                                                      <span className="text-xs text-white font-medium">{bowl.dips[0]}</span>
+                                                    </div>
+                                                  </div>
+                                                )}
                                               </>
                                             );
                                           })()}
@@ -1693,11 +1729,15 @@ export default function OnboardingPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {bowls.map((bowl: any) => (
                                   <div key={bowl._id} className="bg-[#151515] rounded-2xl p-4 border border-gray-800/60 transition-colors">
-                                    <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden">
-                                      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                        <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
+                                      <div className="w-full h-32 bg-[#222] rounded-xl mb-4 overflow-hidden relative">
+                                        {bowl.imageId?.url ? (
+                                          <img src={bowl.imageId.url} alt={bowl.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                            <span className="text-gray-600 text-xs uppercase font-bold tracking-widest">{bowl.category}</span>
+                                          </div>
+                                        )}
                                       </div>
-                                    </div>
                                     {(() => {
                                       const stats = getDynamicBowlStats(bowl, slot);
                                       return (
@@ -1728,7 +1768,34 @@ export default function OnboardingPage() {
                                               <p className="text-[10px] font-bold text-white">{stats.macros.fiber}g</p>
                                             </div>
                                           </div>
-                                          <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                          <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-3">{bowl.ingredients?.slice(0,4).join(", ")}...</p>
+                                          
+                                          {bowl.dips && bowl.dips.length > 1 && (
+                                            <div className="mt-auto border-t border-gray-800/60 pt-3">
+                                              <div className="flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Dip Choice</span>
+                                                  <span className="text-xs text-white font-medium truncate max-w-[100px]">
+                                                    {customizedDips[bowl._id] || "Not Selected"}
+                                                  </span>
+                                                </div>
+                                                <button 
+                                                  onClick={() => setCustomizingBowl(bowl)}
+                                                  className="text-[10px] font-bold uppercase tracking-widest bg-[#FFD700] hover:bg-white text-black px-3 py-1.5 rounded transition-colors shadow-sm"
+                                                >
+                                                  Customize
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                          {bowl.dips && bowl.dips.length === 1 && (
+                                            <div className="mt-auto border-t border-gray-800/60 pt-3">
+                                              <div className="flex flex-col">
+                                                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Included Dip</span>
+                                                <span className="text-xs text-white font-medium">{bowl.dips[0]}</span>
+                                              </div>
+                                            </div>
+                                          )}
                                         </>
                                       );
                                     })()}
@@ -1757,6 +1824,57 @@ export default function OnboardingPage() {
           </div>
         </div>
       </div>
+
+      {/* Customize Dip Modal */}
+      {customizingBowl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-[#151515] border border-gray-800 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setCustomizingBowl(null)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-white mb-2">Select your Dip</h3>
+              <p className="text-sm text-gray-400">Choose a dip for your {customizingBowl.name}</p>
+            </div>
+            <div className="space-y-3 mb-6">
+              {customizingBowl.dips?.map((dip: string) => {
+                const isSelected = customizedDips[customizingBowl._id] === dip;
+                return (
+                  <button
+                    key={dip}
+                    onClick={() => {
+                      setCustomizedDips(prev => ({ ...prev, [customizingBowl._id]: dip }));
+                      if (step === 6) {
+                        fetch('/api/onboarding/update-dips', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ bowlId: customizingBowl._id, selectedDip: dip })
+                        }).catch(err => console.error("Failed to update dip", err));
+                      }
+                      setCustomizingBowl(null);
+                    }}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                      isSelected 
+                        ? 'bg-[#FFD700]/10 border-[#FFD700] text-white' 
+                        : 'bg-gray-800/30 border-gray-800 text-gray-300 hover:border-gray-600 hover:bg-gray-800/50'
+                    }`}
+                  >
+                    <span className="font-medium">{dip}</span>
+                    {isSelected && <Check className="w-5 h-5 text-[#FFD700]" />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

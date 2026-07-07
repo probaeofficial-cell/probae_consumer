@@ -18,6 +18,11 @@ export async function POST(request: Request) {
     if (typeof body.ingredients === "string") {
       body.ingredients = body.ingredients.split(",").map((s: string) => s.trim()).filter(Boolean);
     }
+    
+    // Parse dips comma separated string
+    if (typeof body.dips === "string") {
+      body.dips = body.dips.split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
 
     if (!body.imageId || body.imageId === "") {
       delete body.imageId;

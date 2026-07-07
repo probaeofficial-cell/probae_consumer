@@ -29,6 +29,7 @@ interface Bowl {
   };
   micros: string[];
   ingredients: string[];
+  dips: string[];
   mealTypes: string[];
   isActive?: boolean;
 }
@@ -60,7 +61,7 @@ export default function BowlsPage() {
 
   const [newBowl, setNewBowl] = useState({
     name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
-    macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+    macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", dips: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
   });
 
   const limit = 10;
@@ -237,7 +238,7 @@ export default function BowlsPage() {
           setEditingBowlId(null);
           setNewBowl({
             name: "", code: "", category: "Core", baseCalories: 0, rawMaterialCost: 0, fixedCost: 0, baseWeight: 0,
-            macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
+            macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 }, micros: "", ingredients: "", dips: "", mealTypes: ["B", "L", "D"], imageId: "", isActive: true
           });
           setIsCreateModalOpen(true);
         }}>
@@ -502,11 +503,23 @@ export default function BowlsPage() {
               {/* Ingredients Tags */}
               {selectedBowl.ingredients && selectedBowl.ingredients.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ingredients</h4>
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Ingredients</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedBowl.ingredients.map((ingredient, idx) => (
-                      <span key={idx} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
+                      <span key={idx} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium">
                         {ingredient}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedBowl.dips && selectedBowl.dips.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Dips</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBowl.dips.map((dip, idx) => (
+                      <span key={idx} className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 font-medium">
+                        {dip}
                       </span>
                     ))}
                   </div>
@@ -528,6 +541,7 @@ export default function BowlsPage() {
                   macros: selectedBowl.macros,
                   micros: selectedBowl.micros ? selectedBowl.micros.join(", ") : "",
                   ingredients: selectedBowl.ingredients ? selectedBowl.ingredients.join(", ") : "",
+                  dips: selectedBowl.dips ? selectedBowl.dips.join(", ") : "",
                   mealTypes: selectedBowl.mealTypes || [],
                   imageId: typeof selectedBowl.imageId === 'string' ? selectedBowl.imageId : selectedBowl.imageId?._id || "",
                   isActive: selectedBowl.isActive ?? true,
@@ -553,7 +567,16 @@ export default function BowlsPage() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 md:p-8">
-              <form id="create-bowl-form" onSubmit={handleModalSubmit} className="space-y-6">
+              <form id="create-bowl-form" onSubmit={(e) => {
+                e.preventDefault();
+                const body = {
+                  ...newBowl,
+                  micros: newBowl.micros ? newBowl.micros.split(",").map(m => m.trim()).filter(Boolean) : [],
+                  ingredients: newBowl.ingredients ? newBowl.ingredients.split(",").map(m => m.trim()).filter(Boolean) : [],
+                  dips: newBowl.dips ? newBowl.dips.split(",").map(d => d.trim()).filter(Boolean) : []
+                };
+                handleModalSubmit(e, body);
+              }} className="space-y-6">
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
                   <div>
                     <h4 className="text-sm font-bold text-gray-900">Visible on User Site</h4>
@@ -680,9 +703,13 @@ export default function BowlsPage() {
                 </div>
 
                 <div className="mt-8">
-                  <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 uppercase tracking-wider">Ingredients</h4>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients List <span className="font-normal text-gray-400 ml-1">(comma separated)</span></label>
+                  <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 uppercase tracking-wider">Ingredients & Dips</h4>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients (comma separated)</label>
                   <textarea rows={3} value={newBowl.ingredients} onChange={e => setNewBowl({...newBowl, ingredients: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 resize-y" placeholder="E.g. Brown Rice, Salmon, Edamame" />
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Dips (comma separated)</label>
+                    <input type="text" value={newBowl.dips} onChange={e => setNewBowl({...newBowl, dips: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="E.g. Garlic Mayo, Mint Chutney" />
+                  </div>
                 </div>
               </form>
             </div>

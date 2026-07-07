@@ -18,6 +18,7 @@ export interface IBowl extends Document {
   };
   micros: string[];
   ingredients: string[];
+  dips: string[];
   mealTypes: string[];
   isActive: boolean;
 }
@@ -40,6 +41,7 @@ const BowlSchema: Schema = new Schema({
   },
   micros: [{ type: String, required: true }],
   ingredients: [{ type: String, required: true }],
+  dips: [{ type: String }],
   mealTypes: { type: [String], required: true, default: ["B", "L", "D"] },
   isActive: { type: Boolean, default: true },
 });

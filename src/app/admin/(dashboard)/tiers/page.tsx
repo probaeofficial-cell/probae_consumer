@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2 } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
@@ -37,6 +37,12 @@ interface PlanTier {
 export default function TiersPage() {
   const [tiers, setTiers] = useState<PlanTier[]>([]);
   const [isLoadingTiers, setIsLoadingTiers] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTiers = tiers.filter(tier => 
+    tier.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    tier.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Side-sheet state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -287,15 +293,27 @@ export default function TiersPage() {
       <div className="p-6 md:p-8 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-100 bg-white z-10 relative">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Plan Tiers</h1>
         
-        <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
-          setEditingTierId(null);
-          setNewTier({ name: "", category: "Core", duration: "weekly", days: 5, mealType: "B", discountPrice: 0 });
-          setSelections({ "B": [] });
-          setIsDrawerOpen(true);
-        }}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Tier
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder="Search tiers..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full md:w-64"
+            />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+          <Button variant="primary" className="whitespace-nowrap shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all" onClick={() => {
+            setEditingTierId(null);
+            setNewTier({ name: "", category: "Core", duration: "weekly", days: 5, mealType: "B", discountPrice: 0 });
+            setSelections({ "B": [] });
+            setIsDrawerOpen(true);
+          }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create New Tier
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-x-auto relative">
@@ -321,13 +339,13 @@ export default function TiersPage() {
                   <div className="col-span-2 flex justify-end"><div className="h-6 bg-gray-100 rounded-full w-12"></div></div>
                 </div>
               ))
-            ) : tiers.length === 0 ? (
+            ) : filteredTiers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-12 text-center text-gray-400">
                 <p className="text-lg font-medium text-gray-900 mb-1">No Plan Tiers found</p>
-                <p className="text-sm">Click the button above to create your first pricing blueprint.</p>
+                <p className="text-sm">Try adjusting your search query or create a new tier.</p>
               </div>
             ) : (
-              tiers.map((tier) => (
+              filteredTiers.map((tier) => (
                 <div 
                   key={tier._id} 
                   className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-50/50 items-center hover:bg-gray-50/50 transition-colors" 

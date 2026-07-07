@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import PlanTier from "@/models/PlanTier";
 // Import Bowl to ensure it's registered for population
 import "@/models/Bowl";
+import "@/models/Image";
 import connectToDatabase from "@/lib/db";
 
 export async function POST(req: Request) {
@@ -37,7 +38,13 @@ export async function POST(req: Request) {
     }
 
     // Find all PlanTiers matching duration (case-insensitive) and days
-    const plans = await PlanTier.find(query).populate("selections.bowls");
+    const plans = await PlanTier.find(query).populate({
+      path: "selections.bowls",
+      populate: {
+        path: "imageId",
+        select: "url"
+      }
+    });
 
     return NextResponse.json({ success: true, plans });
   } catch (error) {

@@ -339,6 +339,11 @@ export default function SubscriptionsPage() {
                                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                                        {bowl.calculatedWeight}g
                                      </span>
+                                     {bowl.selectedDip && (
+                                       <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                                         Dip: {bowl.selectedDip}
+                                       </span>
+                                     )}
                                    </div>
                                  </div>
                                </div>
@@ -384,6 +389,11 @@ export default function SubscriptionsPage() {
                                       <span className="text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
                                         {bowl.calculatedWeight}g
                                       </span>
+                                      {bowl.selectedDip && (
+                                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                          Dip: {bowl.selectedDip}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

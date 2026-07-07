@@ -15,6 +15,7 @@ export interface ICalculatedBowl {
     fiber: number;
   };
   micros: string[];
+  selectedDip?: string;
 }
 
 export interface ISubscription extends Document {
@@ -42,6 +43,7 @@ const CalculatedBowlSchema = new Schema({
     fiber: { type: Number, required: true },
   },
   micros: [{ type: String, required: true }],
+  selectedDip: { type: String },
 });
 
 const SubscriptionSchema: Schema = new Schema({
