@@ -13,6 +13,16 @@ export default function OnboardingPage() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [calorieProfile, setCalorieProfile] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [isChartLoaded, setIsChartLoaded] = useState(false);
+
+  useEffect(() => {
+    if (step === 3) {
+      const timer = setTimeout(() => setIsChartLoaded(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsChartLoaded(false);
+    }
+  }, [step]);
   
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
@@ -915,19 +925,19 @@ export default function OnboardingPage() {
                               
                               {/* Protein Segment (Purple) */}
                               <circle cx="150" cy="150" r="120" fill="none" stroke="#8B5CF6" strokeWidth="20" 
-                                strokeDasharray={`${pStroke} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
+                                strokeDasharray={`${isChartLoaded ? pStroke : 0} ${circ}`} strokeDashoffset={pOffset} className="transition-all duration-1000 ease-out" />
                                 
                               {/* Carbs Segment (Orange) */}
                               <circle cx="150" cy="150" r="120" fill="none" stroke="#F97316" strokeWidth="20" 
-                                strokeDasharray={`${cStroke} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out" />
+                                strokeDasharray={`${isChartLoaded ? cStroke : 0} ${circ}`} strokeDashoffset={cOffset} className="transition-all duration-1000 ease-out delay-100" />
                                 
                               {/* Fat Segment (Green) */}
                               <circle cx="150" cy="150" r="120" fill="none" stroke="#10B981" strokeWidth="20" 
-                                strokeDasharray={`${fStroke} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out" />
+                                strokeDasharray={`${isChartLoaded ? fStroke : 0} ${circ}`} strokeDashoffset={fOffset} className="transition-all duration-1000 ease-out delay-200" />
                                 
                               {/* Fiber Segment (Peach) */}
                               <circle cx="150" cy="150" r="120" fill="none" stroke="#FFB084" strokeWidth="20" 
-                                strokeDasharray={`${fiStroke} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out" />
+                                strokeDasharray={`${isChartLoaded ? fiStroke : 0} ${circ}`} strokeDashoffset={fiOffset} className="transition-all duration-1000 ease-out delay-300" />
                             </>
                           );
                         })()}

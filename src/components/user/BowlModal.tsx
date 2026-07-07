@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface BowlModalProps {
   bowl: any | null;
@@ -12,6 +13,7 @@ interface BowlModalProps {
 export default function BowlModal({ bowl, onClose }: BowlModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -130,8 +132,11 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
 
         {/* Fixed Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pt-12">
-          <button className="w-full bg-[#F97316] text-white font-bold py-4 rounded-2xl shadow-lg hover:-translate-y-0.5 transition-transform">
-            Add to Cart - ${bowl.basePrice.toFixed(2)}
+          <button 
+            onClick={() => router.push('/onboarding')}
+            className="w-full bg-[#F97316] text-white font-bold py-4 rounded-2xl shadow-lg hover:-translate-y-0.5 transition-transform"
+          >
+            Order Now
           </button>
         </div>
       </div>
