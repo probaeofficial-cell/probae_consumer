@@ -110,10 +110,10 @@ export default function SubscriptionsPage() {
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-100 bg-white text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0 sticky top-0 z-10">
             <div className="col-span-3">User</div>
-            <div className="col-span-3">Plan Info</div>
+            <div className="col-span-2">Plan Info</div>
             <div className="col-span-2">Meal Combo</div>
             <div className="col-span-2">Total Price</div>
-            <div className="col-span-1 text-center">Status</div>
+            <div className="col-span-2 text-center">Status</div>
             <div className="col-span-1 text-right">Actions</div>
           </div>
 
@@ -138,7 +138,7 @@ export default function SubscriptionsPage() {
                     <div className="font-semibold text-gray-900">{sub.user?.name || "Unknown"}</div>
                     <div className="text-xs text-gray-500">{sub.user?.phone || "No phone"}</div>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <div className="font-semibold text-gray-900">{sub.plan?.name || "N/A"}</div>
                     <div className="text-xs text-gray-500">{sub.plan?.frequency || ""}</div>
                   </div>
@@ -148,7 +148,7 @@ export default function SubscriptionsPage() {
                   <div className="col-span-2 text-sm text-gray-900 font-semibold">
                     ₹{sub.finalTotalPrice?.toFixed(2)}
                   </div>
-                  <div className="col-span-1 text-center">
+                  <div className="col-span-2 text-center">
                     <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border border-green-200 bg-green-50 text-green-600">
                       {sub.status}
                     </span>
