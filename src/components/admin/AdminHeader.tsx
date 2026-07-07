@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Search, Bell, User, Key, LogOut, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LogoutModal from "./LogoutModal";
 
 export default function AdminHeader() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -14,13 +15,44 @@ export default function AdminHeader() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  
+  const [profileImageUrl, setProfileImageUrl] = useState<string>("");
+  
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
+    loadProfileImage();
     // Optionally poll every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    
+    const handleProfileUpdate = () => loadProfileImage();
+    window.addEventListener("adminProfileUpdated", handleProfileUpdate);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("adminProfileUpdated", handleProfileUpdate);
+    };
   }, []);
+
+  const loadProfileImage = async () => {
+    const cachedUrl = localStorage.getItem("adminProfileImageUrl");
+    if (cachedUrl) {
+      setProfileImageUrl(cachedUrl);
+    } else {
+      try {
+        const res = await fetch("/api/admin/profile");
+        const data = await res.json();
+        if (data.success && data.profile.profileImageUrl) {
+          setProfileImageUrl(data.profile.profileImageUrl);
+          localStorage.setItem("adminProfileImageUrl", data.profile.profileImageUrl);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile image", error);
+      }
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -70,12 +102,15 @@ export default function AdminHeader() {
   }, []);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/admin/login");
       router.refresh();
     } catch (error) {
       console.error("Logout failed", error);
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
     }
   };
 
@@ -148,9 +183,14 @@ export default function AdminHeader() {
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsNotifOpen(false); }}
-            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-md hover:opacity-90 transition-opacity focus:outline-none"
+            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md hover:opacity-90 transition-opacity focus:outline-none ${!profileImageUrl ? 'bg-primary text-white' : ''}`}
           >
-            <User className="w-5 h-5" />
+            {profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profileImageUrl} alt="Admin" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <User className="w-5 h-5" />
+            )}
           </button>
 
           {isDropdownOpen && (
@@ -161,7 +201,7 @@ export default function AdminHeader() {
               
               <div className="py-2">
                 <Link 
-                  href="/admin/profile" 
+                  href="/admin/settings" 
                   className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
@@ -170,7 +210,7 @@ export default function AdminHeader() {
                 </Link>
                 
                 <Link 
-                  href="/admin/settings/password" 
+                  href="/admin/settings" 
                   className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
                 >
@@ -181,7 +221,7 @@ export default function AdminHeader() {
               
               <div className="border-t border-gray-50 py-2">
                 <button 
-                  onClick={handleLogout}
+                  onClick={() => { setIsLogoutModalOpen(true); setIsDropdownOpen(false); }}
                   className="flex items-center w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors text-left font-medium"
                 >
                   <LogOut className="w-4 h-4 mr-3" />
@@ -193,6 +233,13 @@ export default function AdminHeader() {
         </div>
 
       </div>
+
+      <LogoutModal 
+        isOpen={isLogoutModalOpen} 
+        onClose={() => setIsLogoutModalOpen(false)} 
+        onConfirm={handleLogout} 
+        isLoggingOut={isLoggingOut} 
+      />
     </header>
   );
 }

@@ -15,19 +15,25 @@ import {
   ChevronsRight
 } from "lucide-react";
 import Button from "@/components/ui/Button";
+import LogoutModal from "./LogoutModal";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/admin/login");
       router.refresh();
     } catch (error) {
       console.error("Logout failed", error);
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
     }
   };
 
@@ -146,7 +152,7 @@ export default function AdminSidebar() {
         <div className={isCollapsed ? "px-0" : "px-2"}>
           {isCollapsed ? (
              <button 
-                onClick={handleLogout}
+                onClick={() => setIsLogoutModalOpen(true)}
                 title="Logout"
                 className="w-full flex items-center justify-center py-3 text-red-500 hover:text-red-400 hover:bg-white/5 rounded-xl transition-colors"
              >
@@ -154,7 +160,7 @@ export default function AdminSidebar() {
              </button>
           ) : (
             <Button 
-              onClick={handleLogout} 
+              onClick={() => setIsLogoutModalOpen(true)} 
               variant="secondary" 
               className="w-full flex items-center justify-center py-2.5 text-sm"
             >
@@ -165,6 +171,13 @@ export default function AdminSidebar() {
         </div>
       </div>
     </aside>
+
+    <LogoutModal 
+      isOpen={isLogoutModalOpen} 
+      onClose={() => setIsLogoutModalOpen(false)} 
+      onConfirm={handleLogout} 
+      isLoggingOut={isLoggingOut} 
+    />
     </>
   );
 }

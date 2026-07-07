@@ -35,7 +35,10 @@ export async function POST(request: Request) {
       .setExpirationTime("24h")
       .sign(secret);
       
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ 
+      success: true,
+      profileImageUrl: admin.profileImageUrl || ""
+    });
     
     response.cookies.set("admin_token", jwt, {
       httpOnly: true,

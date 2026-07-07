@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Activity, ShieldCheck, Zap } from "lucide-react";
+import { Lock, Mail, Activity, ShieldCheck, Zap, User } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 export default function AdminLogin() {
@@ -10,7 +10,15 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    const cachedUrl = localStorage.getItem("adminProfileImageUrl");
+    if (cachedUrl) {
+      setProfileImageUrl(cachedUrl);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +32,15 @@ export default function AdminLogin() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
+        if (data.profileImageUrl) {
+          localStorage.setItem("adminProfileImageUrl", data.profileImageUrl);
+        }
         router.push("/admin/dashboard");
         router.refresh();
       } else {
-        const data = await res.json();
         setError(data.error || "Login failed");
       }
     } catch (err) {
@@ -53,9 +65,23 @@ export default function AdminLogin() {
           </div>
 
           <div className="bg-[#222222] p-8 rounded-2xl shadow-2xl border border-[#333333]">
-            <h2 className="text-3xl font-extrabold text-white font-headline">
-              Welcome back
-            </h2>
+            <div className="flex items-center gap-4 mb-2">
+              {profileImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                  src={profileImageUrl} 
+                  alt="Admin" 
+                  className="w-12 h-12 rounded-full object-cover border border-[#333333]"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center border border-primary/30">
+                  <User className="w-6 h-6" />
+                </div>
+              )}
+              <h2 className="text-3xl font-extrabold text-white font-headline">
+                Welcome back
+              </h2>
+            </div>
             <p className="mt-2 text-sm text-gray-400">
               Sign in to keep managing the Probae platform.
             </p>
