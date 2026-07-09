@@ -3,6 +3,9 @@ import bcrypt from "bcrypt";
 import connectToDatabase from "@/lib/db";
 import AdminUser from "@/models/AdminUser";
 
+
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Forbidden in production" }, { status: 403 });

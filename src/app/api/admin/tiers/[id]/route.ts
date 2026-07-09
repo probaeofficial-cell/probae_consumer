@@ -3,6 +3,9 @@ import PlanTier from "@/models/PlanTier";
 import Bowl from "@/models/Bowl"; // Register Bowl model for population
 import { NextResponse } from "next/server";
 
+
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

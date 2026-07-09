@@ -4,6 +4,9 @@ import * as jose from "jose";
 import AdminUser from "@/models/AdminUser";
 import connectToDatabase from "@/lib/db";
 
+
+export const dynamic = "force-dynamic";
+
 // Helper to get authenticated admin ID
 async function getAuthAdminId() {
   const cookieStore = await cookies();

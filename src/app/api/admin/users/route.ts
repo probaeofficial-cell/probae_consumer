@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import User from "@/models/User";
 import connectToDatabase from "@/lib/db";
 
+
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     await connectToDatabase();

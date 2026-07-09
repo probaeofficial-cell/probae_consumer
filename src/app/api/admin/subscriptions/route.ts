@@ -4,6 +4,9 @@ import "@/models/PlanTier"; // Register model for populate
 import "@/models/User"; // Register model for populate
 import connectToDatabase from "@/lib/db";
 
+
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     await connectToDatabase();

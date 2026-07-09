@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import User from '@/models/User';
 import connectToDatabase from '@/lib/db';
 
+
+export const dynamic = "force-dynamic";
+
 // Helper to get client IP
 function getClientIp(request: Request): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
