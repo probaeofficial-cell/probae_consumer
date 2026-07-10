@@ -18,8 +18,21 @@ export default async function LandingPage() {
   // Fetch active bowls and populate image
   const bowls = await Bowl.find({ isActive: true }).populate("imageId").lean();
   
+  // Separate bowls by meal type for interleaving
+  const bBowls = bowls.filter((b: any) => b.mealTypes?.includes("B"));
+  const lBowls = bowls.filter((b: any) => b.mealTypes?.includes("L") && !b.mealTypes?.includes("B"));
+  const dBowls = bowls.filter((b: any) => b.mealTypes?.includes("D") && !b.mealTypes?.includes("L") && !b.mealTypes?.includes("B"));
+  
+  const interleavedBowls = [];
+  const maxLength = Math.max(bBowls.length, lBowls.length, dBowls.length);
+  for (let i = 0; i < maxLength; i++) {
+    if (bBowls[i]) interleavedBowls.push(bBowls[i]);
+    if (lBowls[i]) interleavedBowls.push(lBowls[i]);
+    if (dBowls[i]) interleavedBowls.push(dBowls[i]);
+  }
+  
   // Serialize ObjectId to string for client component and limit to 10 bowls
-  const serializedBowls = bowls.slice(0, 10).map((bowl: any) => ({
+  const serializedBowls = interleavedBowls.slice(0, 10).map((bowl: any) => ({
     _id: bowl._id.toString(),
     name: bowl.name,
     baseCalories: bowl.baseCalories,
