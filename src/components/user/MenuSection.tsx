@@ -41,20 +41,21 @@ export default function MenuSection({ bowls }: MenuSectionProps) {
   const paginatedBowls = filteredBowls.slice(0, itemsToShow);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
+  
   const lastElementRef = useCallback((node: HTMLDivElement | null) => {
     if (observerRef.current) observerRef.current.disconnect();
     if (node) {
       observerRef.current = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting && filteredBowls.length > itemsToShow) {
-          // Add a tiny delay so it feels natural
-          setTimeout(() => {
-            setItemsToShow(prev => prev + 5);
-          }, 400);
+        if (entries[0].isIntersecting) {
+          setItemsToShow(prev => prev + 5);
         }
+      }, {
+        rootMargin: '200px',
+        threshold: 0.1
       });
       observerRef.current.observe(node);
     }
-  }, [filteredBowls.length, itemsToShow]);
+  }, []);
 
   return (
     <section id="menu-section" className="bg-white/70 backdrop-blur-3xl rounded-t-[40px] pt-32 md:pt-40 pb-24 md:pb-32 flex flex-col relative z-20 min-h-screen shadow-[0_-10px_40px_rgba(0,0,0,0.03)] border-t border-white/50">

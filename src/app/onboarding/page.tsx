@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home, X, Lock, Unlock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -49,19 +49,12 @@ export default function OnboardingPage() {
     planDuration: "WEEKLY",
     planFrequency: "5 DAYS",
     mealSlots: ["LUNCH"] as string[],
-    mealRatios: { "LUNCH": 100 } as Record<string, number>,
-    purchasedCalories: 0,
+    mealCalories: { "LUNCH": 500 } as Record<string, number>,
+    lockedMeals: {} as Record<string, boolean>,
   });
 
-  const balanceMealRatios = (slots: string[]) => {
-    if (slots.length === 0) return {};
-    const baseRatio = Math.floor(100 / slots.length);
-    let remainder = 100 - (baseRatio * slots.length);
-    const newRatios: Record<string, number> = {};
-    slots.forEach((slot, index) => {
-      newRatios[slot] = baseRatio + (index === 0 ? remainder : 0);
-    });
-    return newRatios;
+  const getTotalPurchasedCalories = () => {
+    return Object.values(formData.mealCalories).reduce((sum, val) => sum + val, 0);
   };
 
   useEffect(() => {
@@ -72,8 +65,11 @@ export default function OnboardingPage() {
           const { data } = await res.json();
           if (data) {
             const updatedData = { ...data };
-            if (updatedData.mealSlots && !updatedData.mealRatios) {
-              updatedData.mealRatios = balanceMealRatios(updatedData.mealSlots);
+            if (updatedData.mealSlots && !updatedData.mealCalories) {
+              updatedData.mealCalories = {};
+              updatedData.mealSlots.forEach((slot: string) => {
+                updatedData.mealCalories[slot] = 500;
+              });
             }
             setFormData(prev => ({ ...prev, ...updatedData }));
             
@@ -125,11 +121,13 @@ export default function OnboardingPage() {
 
   const toggleArrayField = (field: "dietaryPreferences" | "allergies" | "mealSlots", value: string) => {
     setFormData((prev) => {
-      const current = prev[field];
+      const current = prev[field] as string[];
       if (current.includes(value)) {
         const newArray = current.filter(item => item !== value);
         if (field === "mealSlots") {
-          return { ...prev, [field]: newArray, mealRatios: balanceMealRatios(newArray) };
+          const newCalories = { ...prev.mealCalories };
+          delete newCalories[value];
+          return { ...prev, [field]: newArray, mealCalories: newCalories };
         }
         return { ...prev, [field]: newArray };
       } else {
@@ -140,39 +138,72 @@ export default function OnboardingPage() {
         }
         const newArray = [...current, value];
         if (field === "mealSlots") {
-          return { ...prev, [field]: newArray, mealRatios: balanceMealRatios(newArray) };
+          const newCalories = { ...prev.mealCalories };
+          newCalories[value] = calorieProfile?.total ? Math.round(calorieProfile.total / 3) : 500;
+          return { ...prev, [field]: newArray, mealCalories: newCalories };
         }
         return { ...prev, [field]: newArray };
       }
     });
   };
 
-  const handleRatioChange = (slotId: string, newValue: number) => {
-    if (formData.mealSlots.length <= 1) return;
-    const validValue = Math.min(100, Math.max(0, newValue));
+  const handleMealCalorieChange = (slotId: string, newValue: number) => {
     setFormData((prev) => {
-      const newRatios = { ...prev.mealRatios };
-      newRatios[slotId] = validValue;
-      const otherSlots = prev.mealSlots.filter(s => s !== slotId);
-      if (otherSlots.length === 1) {
-        newRatios[otherSlots[0]] = 100 - validValue;
-      } else {
-        const remainingToDistribute = 100 - validValue;
-        const totalOther = otherSlots.reduce((sum, s) => sum + newRatios[s], 0);
-        let accumulated = 0;
-        for (let i = 0; i < otherSlots.length - 1; i++) {
-          const s = otherSlots[i];
-          const share = totalOther === 0 
-            ? Math.floor(remainingToDistribute / otherSlots.length) 
-            : Math.round((newRatios[s] / totalOther) * remainingToDistribute);
-          newRatios[s] = share;
-          accumulated += share;
+      const newCalories = { ...prev.mealCalories };
+      let validValue = newValue;
+
+      if (prev.mealSlots.length === 3) {
+        // Auto-balance logic for 3 meals
+        const unlockedSlots = prev.mealSlots.filter(s => s !== slotId && !prev.lockedMeals[s]);
+        const currentSumOfUnlocked = unlockedSlots.reduce((sum, s) => sum + (newCalories[s] || 0), 0);
+        const minPossibleSumOfUnlocked = unlockedSlots.length * 100;
+        
+        const maxIncrease = currentSumOfUnlocked - minPossibleSumOfUnlocked;
+        const currentVal = newCalories[slotId] || 0;
+        
+        validValue = Math.min(newValue, currentVal + maxIncrease);
+        validValue = Math.max(100, Math.min(calorieProfile?.total || 3000, validValue));
+        
+        const diff = validValue - currentVal;
+        newCalories[slotId] = validValue;
+
+        if (unlockedSlots.length > 0) {
+          const diffPerSlot = Math.round(diff / unlockedSlots.length);
+          let remainingDiff = diff;
+          
+          for (let i = 0; i < unlockedSlots.length; i++) {
+            const s = unlockedSlots[i];
+            const adjustment = (i === unlockedSlots.length - 1) ? remainingDiff : diffPerSlot;
+            const adjustedValue = Math.max(100, (newCalories[s] || 0) - adjustment);
+            const actualAdjustment = (newCalories[s] || 0) - adjustedValue;
+            
+            newCalories[s] = adjustedValue;
+            remainingDiff -= actualAdjustment;
+          }
         }
-        const lastSlot = otherSlots[otherSlots.length - 1];
-        newRatios[lastSlot] = remainingToDistribute - accumulated;
+      } else {
+        // 1 or 2 slots: independent, but total sum cannot exceed calorieProfile.total
+        const otherSlotsSum = prev.mealSlots
+          .filter(s => s !== slotId)
+          .reduce((sum, s) => sum + (newCalories[s] || 0), 0);
+          
+        const maxAllowed = (calorieProfile?.total || 3000) - otherSlotsSum;
+        validValue = Math.max(100, Math.min(maxAllowed, newValue));
+        newCalories[slotId] = validValue;
       }
-      return { ...prev, mealRatios: newRatios };
+
+      return { ...prev, mealCalories: newCalories };
     });
+  };
+
+  const toggleMealLock = (slotId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      lockedMeals: {
+        ...prev.lockedMeals,
+        [slotId]: !prev.lockedMeals[slotId]
+      }
+    }));
   };
 
   const addCustomAllergy = () => {
@@ -205,10 +236,22 @@ export default function OnboardingPage() {
       const data = await res.json();
       if (data.success) {
         setCalorieProfile(data.calorieProfile);
-        setFormData(prev => ({
-          ...prev,
-          purchasedCalories: prev.purchasedCalories > 0 ? prev.purchasedCalories : data.calorieProfile.total
-        }));
+        setFormData(prev => {
+          const newCalories = { ...prev.mealCalories };
+          if (prev.mealSlots.length > 0) {
+            // If we just got the calorieProfile, and they have the default 500 calories
+            // We can update the newly added slots to be TDEE/3
+            prev.mealSlots.forEach(slot => {
+              if (!newCalories[slot] || newCalories[slot] === 500) {
+                 newCalories[slot] = Math.round(data.calorieProfile.total / 3);
+              }
+            });
+          }
+          return {
+            ...prev,
+            mealCalories: newCalories
+          };
+        });
         setStep(3); // Go to Calorie Profile
       }
     } catch (err) {
@@ -338,7 +381,7 @@ export default function OnboardingPage() {
           selectedMealCombo,
           calculatedBowls,
           finalTotalPrice,
-          purchasedCalories: formData.purchasedCalories
+          purchasedCalories: getTotalPurchasedCalories()
         })
       });
       const data = await res.json();
@@ -360,20 +403,29 @@ export default function OnboardingPage() {
     if (typeCode === 'D') slotId = 'DINNER';
     if (!formData.mealSlots.includes(slotId)) return 0;
     
-    return formData.mealRatios?.[slotId] ?? (100 / Math.max(1, formData.mealSlots.length));
+    const total = getTotalPurchasedCalories();
+    if (total === 0) return 0;
+    return (formData.mealCalories[slotId] || 0) / total * 100;
   };
 
   const getDynamicCalsPerMeal = (typeCode: string = '') => {
     if (!calorieProfile || formData.mealSlots.length === 0) return 0;
-    const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
-    const totalToDistribute = formData.purchasedCalories || calorieProfile.total;
-    return Math.round(totalToDistribute * ratio);
+    if (typeCode) {
+      let slotId = typeCode;
+      if (typeCode === 'B') slotId = 'B-FAST';
+      if (typeCode === 'L') slotId = 'LUNCH';
+      if (typeCode === 'D') slotId = 'DINNER';
+      return formData.mealCalories[slotId] || 0;
+    }
+    
+    // If no typeCode, return average
+    return Math.round(getTotalPurchasedCalories() / formData.mealSlots.length);
   };
 
   const getDynamicMacroPerMeal = (macro: 'protein' | 'carbs' | 'fat' | 'fiber', typeCode: string = '') => {
     if (!calorieProfile || formData.mealSlots.length === 0) return 0;
     const ratio = typeCode ? (getRatioForType(typeCode) / 100) : (1 / formData.mealSlots.length);
-    const scaleFactor = (formData.purchasedCalories || calorieProfile.total) / calorieProfile.total;
+    const scaleFactor = getTotalPurchasedCalories() / calorieProfile.total;
     return Math.round(calorieProfile[macro] * scaleFactor * ratio);
   };
 
@@ -965,7 +1017,9 @@ export default function OnboardingPage() {
                         <span className="text-4xl font-bold text-white font-mono tracking-tight">
                           {calorieProfile.total.toLocaleString()}
                         </span>
-                        <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">KCAL</span>
+                        <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">
+                          KCAL
+                        </span>
                       </div>
                     </div>
 
@@ -1090,41 +1144,6 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Calories to Purchase */}
-                <div>
-                  <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Calories to Purchase</h3>
-                  <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 flex flex-col items-center shadow-inner">
-                    <p className="text-gray-400 text-sm text-center mb-6 leading-relaxed">
-                      Your goal requires <span className="text-white font-bold">{calorieProfile?.total || 0} kcal</span> daily. 
-                      Select how many calories you'd like to purchase from us.
-                    </p>
-                    <div className="flex items-center justify-center gap-4 w-full">
-                      <button 
-                        type="button"
-                        onClick={() => updateField("purchasedCalories", Math.max(500, (formData.purchasedCalories || 2000) - 100))}
-                        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white flex items-center justify-center hover:bg-gray-700 transition-colors shadow-md text-xl"
-                      >
-                        -
-                      </button>
-                      <div className="flex flex-col items-center w-32">
-                        <input 
-                          type="number" 
-                          value={formData.purchasedCalories || 0}
-                          onChange={(e) => updateField("purchasedCalories", parseInt(e.target.value) || 0)}
-                          className="w-full bg-transparent text-white text-4xl font-black font-mono text-center focus:outline-none placeholder-gray-700"
-                        />
-                        <span className="text-xs text-tertiary font-bold tracking-widest mt-1">KCAL</span>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => updateField("purchasedCalories", Math.min(6000, (formData.purchasedCalories || 2000) + 100))}
-                        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white flex items-center justify-center hover:bg-gray-700 transition-colors shadow-md text-xl"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Meal Slots */}
                 <div>
@@ -1163,31 +1182,73 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Calorie Distribution UI */}
-                {formData.mealSlots.length > 1 && (
+                {formData.mealSlots.length > 0 && (
                   <div className="mt-6">
-                    <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Calorie Distribution</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest">Calorie Distribution</h3>
+                      {formData.mealSlots.length === 3 && (
+                        <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded border border-gray-700/50">
+                          Auto-balances to maintain total
+                        </span>
+                      )}
+                    </div>
                     <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 space-y-6">
-                      {formData.mealSlots.map((slotId) => (
-                        <div key={slotId} className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold text-gray-300">{slotId}</span>
-                            <span className="text-sm font-bold text-white bg-white/10 px-2 py-0.5 rounded">
-                              {formData.mealRatios?.[slotId] || 0}% <span className="text-gray-400 text-xs ml-1 font-medium">({getDynamicCalsPerMeal(slotId)} kcal)</span>
-                            </span>
+                      {formData.mealSlots.map((slotId) => {
+                        const isLocked = formData.lockedMeals[slotId];
+                        const showLock = formData.mealSlots.length === 3;
+                        return (
+                          <div key={slotId} className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-gray-300">{slotId}</span>
+                                {showLock && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleMealLock(slotId)}
+                                    className={`p-1.5 rounded-lg transition-colors border ${isLocked ? 'bg-tertiary/20 text-tertiary border-tertiary/30' : 'bg-gray-800 text-gray-500 border-gray-700 hover:text-gray-300'}`}
+                                    title={isLocked ? "Unlock slider" : "Lock slider"}
+                                  >
+                                    {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                                  </button>
+                                )}
+                              </div>
+                              <span className={`text-sm font-bold bg-white/10 px-2 py-0.5 rounded ${isLocked ? 'text-tertiary' : 'text-white'}`}>
+                                {formData.mealCalories?.[slotId] || 0} kcal
+                              </span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="100" 
+                              max={calorieProfile?.total || 3000} 
+                              step="10"
+                              value={formData.mealCalories?.[slotId] || 0}
+                              onChange={(e) => handleMealCalorieChange(slotId, parseInt(e.target.value))}
+                              disabled={isLocked && showLock}
+                              className={`w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#4CAF50] ${isLocked && showLock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            />
                           </div>
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={formData.mealRatios?.[slotId] || 0}
-                            onChange={(e) => handleRatioChange(slotId, parseInt(e.target.value))}
-                            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#4CAF50]"
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
+
+                {/* Calories to Purchase - Moved below distribution */}
+                <div className="mt-6">
+                  <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Total Purchased Calories</h3>
+                  <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 flex flex-col items-center shadow-inner">
+                    <p className="text-gray-400 text-sm text-center mb-6 leading-relaxed">
+                      Your goal requires <span className="text-white font-bold">{calorieProfile?.total || 0} kcal</span> daily. 
+                      You can adjust your intake per meal slot above.
+                    </p>
+                    <div className="flex flex-col items-center w-full">
+                      <div className="w-full bg-transparent text-white text-4xl font-black font-mono text-center focus:outline-none placeholder-gray-700">
+                        {getTotalPurchasedCalories()}
+                      </div>
+                      <span className="text-xs text-tertiary font-bold tracking-widest mt-1">KCAL TOTAL</span>
+                    </div>
+                  </div>
+                </div>
                   </div>
                 </div>
 
@@ -1581,25 +1642,25 @@ export default function OnboardingPage() {
                         
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                           <span className="text-4xl font-bold text-white font-mono tracking-tight">
-                            {(formData.purchasedCalories || calorieProfile.total).toLocaleString()}
+                            {(getTotalPurchasedCalories() || calorieProfile.total).toLocaleString()}
                           </span>
                           <span className="text-xs text-gray-400 font-bold tracking-widest mt-1">
-                            {formData.purchasedCalories && formData.purchasedCalories !== calorieProfile.total ? "PROBAE KCAL" : "KCAL"}
+                            {getTotalPurchasedCalories() > 0 && getTotalPurchasedCalories() !== calorieProfile.total ? "PROBAE KCAL" : "KCAL"}
                           </span>
                         </div>
                       </div>
 
-                      {formData.purchasedCalories && formData.purchasedCalories !== calorieProfile.total && (
+                      {getTotalPurchasedCalories() > 0 && getTotalPurchasedCalories() !== calorieProfile.total && (
                         <div className="mb-6 text-center">
                           <p className="text-gray-400 text-sm">
                             Your total daily requirement is <span className="text-white font-bold">{calorieProfile.total.toLocaleString()} kcal</span>.<br/>
-                            You are purchasing <span className="text-white font-bold">{formData.purchasedCalories.toLocaleString()} kcal</span> from us.
+                            You are purchasing <span className="text-white font-bold">{getTotalPurchasedCalories().toLocaleString()} kcal</span> from us.
                           </p>
                         </div>
                       )}
 
                       {(() => {
-                        const scaleFactor = (formData.purchasedCalories || calorieProfile.total) / calorieProfile.total;
+                        const scaleFactor = (getTotalPurchasedCalories() || calorieProfile.total) / calorieProfile.total;
                         const p = Math.round(calorieProfile.protein * scaleFactor);
                         const c = Math.round(calorieProfile.carbs * scaleFactor);
                         const f = Math.round(calorieProfile.fat * scaleFactor);

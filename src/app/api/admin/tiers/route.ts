@@ -34,15 +34,35 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectToDatabase();
     
-    const tiers = await PlanTier.find().sort({ _id: -1 }).lean();
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+    const search = searchParams.get("search") || "";
+
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [tiers, totalCount] = await Promise.all([
+      PlanTier.find(query).sort({ _id: -1 }).skip(skip).limit(limit).lean(),
+      PlanTier.countDocuments(query),
+    ]);
 
     return NextResponse.json({
       success: true,
       tiers,
+      totalCount,
+      page,
+      limit,
     });
   } catch (error) {
     console.error("Fetch tiers error:", error);

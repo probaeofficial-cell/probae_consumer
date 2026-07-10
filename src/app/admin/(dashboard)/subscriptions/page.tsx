@@ -33,7 +33,8 @@ interface Subscription {
     goal: string;
     activityLevel: string;
     mealSlots: string[];
-    mealRatios: Record<string, number>;
+    mealRatios?: Record<string, number>;
+    mealCalories?: Record<string, number>;
     purchasedCalories?: number;
     calorieProfile: {
       total: number;
@@ -276,16 +277,15 @@ export default function SubscriptionsPage() {
               {/* Meal Ratios */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-4 uppercase tracking-wider">Custom Meal Split</h4>
-                <div className="flex gap-2">
-                  {selectedSub.user.mealSlots?.map(slot => {
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedSub.user.mealSlots?.map((slot: string) => {
                     const ratio = selectedSub.user.mealRatios?.[slot] ?? (100 / selectedSub.user.mealSlots.length);
                     const totalToDistribute = selectedSub.user.purchasedCalories || selectedSub.user.calorieProfile?.total || 0;
-                    const slotCalories = Math.round(totalToDistribute * (ratio / 100));
+                    const slotCalories = selectedSub.user.mealCalories?.[slot] ?? Math.round(totalToDistribute * (ratio / 100));
                     return (
-                      <div key={slot} className="flex-1 bg-white p-3 rounded-xl border border-gray-200 text-center">
+                      <div key={slot} className="bg-white p-3 rounded-xl border border-gray-200 text-center">
                         <p className="text-xs font-bold text-gray-500 mb-1">{slot}</p>
-                        <p className="text-lg font-bold text-primary">{ratio}%</p>
-                        <p className="text-[11px] font-semibold text-gray-500">{slotCalories} kcal</p>
+                        <p className="text-lg font-bold text-primary">{slotCalories} kcal</p>
                       </div>
                     );
                   })}
@@ -383,7 +383,7 @@ export default function SubscriptionsPage() {
                                     <p className="font-bold text-gray-900 text-sm leading-tight">{bowl.name}</p>
                                     <div className="flex gap-2 mt-1 flex-wrap">
                                       <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
-                                        {mealLabel} {bowl.ratio ? `(${bowl.ratio}%)` : ''}
+                                        {mealLabel}
                                       </span>
                                       <span className="text-[10px] font-bold text-yellow-600 bg-yellow-50 border border-yellow-100 px-1.5 py-0.5 rounded">
                                         {bowl.assignedCalories} kcal

@@ -39,10 +39,18 @@ export default function TiersPage() {
   const [isLoadingTiers, setIsLoadingTiers] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredTiers = tiers.filter(tier => 
-    tier.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tier.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [tiersPage, setTiersPage] = useState(1);
+  const [tiersTotalPages, setTiersTotalPages] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce main search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setTiersPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   // Side-sheet state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -87,29 +95,43 @@ export default function TiersPage() {
     setTimeout(() => setPageAlert(null), 5000);
   };
 
-  const fetchTiers = useCallback(async () => {
+  const fetchTiers = useCallback(async (page: number) => {
     setIsLoadingTiers(true);
     try {
-      const res = await fetch("/api/admin/tiers");
+      const limit = 10;
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      
+      if (debouncedSearch) {
+        queryParams.set("search", debouncedSearch);
+      }
+      
+      const res = await fetch(`/api/admin/tiers?${queryParams.toString()}`);
       const data = await res.json();
       if (data.success) {
         setTiers(data.tiers);
+        setTiersTotalPages(Math.ceil(data.totalCount / limit) || 1);
       }
     } catch (error) {
       console.error("Failed to fetch tiers:", error);
     } finally {
       setIsLoadingTiers(false);
     }
-  }, []);
+  }, [debouncedSearch]);
 
   const fetchBowls = useCallback(async (page: number, currentMealType?: string) => {
     setIsFetchingBowls(true);
     try {
       const limit = 10;
       
-      const combos = currentMealType || newTier.mealType;
-      const uniqueTypes = new Set<string>(combos.split(",").map(t => t.trim()));
-      const typesStr = Array.from(uniqueTypes).join(",");
+      const mt = currentMealType || newTier.mealType || "";
+      let types: string[] = [];
+      if (mt.includes('Breakfast') || mt.includes('B')) types.push('B');
+      if (mt.includes('Lunch') || mt.includes('L')) types.push('L');
+      if (mt.includes('Dinner') || mt.includes('D')) types.push('D');
+      const typesStr = types.join(",");
       
       const queryParams = new URLSearchParams({
         page: page.toString(),
@@ -138,8 +160,8 @@ export default function TiersPage() {
   }, [newTier.mealType, debouncedBowlsSearch]);
 
   useEffect(() => {
-    fetchTiers();
-  }, [fetchTiers]);
+    fetchTiers(tiersPage);
+  }, [fetchTiers, tiersPage]);
 
   useEffect(() => {
     if (isDrawerOpen) {
@@ -149,7 +171,12 @@ export default function TiersPage() {
 
   const handleMealTypeChange = (typeStr: string) => {
     setNewTier(prev => ({ ...prev, mealType: typeStr }));
-    const types = typeStr.split(",").map(t => t.trim());
+    
+    let types: string[] = [];
+    if (typeStr.includes('Breakfast') || typeStr.includes('B')) types.push('B');
+    if (typeStr.includes('Lunch') || typeStr.includes('L')) types.push('L');
+    if (typeStr.includes('Dinner') || typeStr.includes('D')) types.push('D');
+    
     setSelections(prev => {
       const next: Record<string, Bowl[]> = {};
       types.forEach(t => {
@@ -249,7 +276,7 @@ export default function TiersPage() {
         setEditingTierId(null);
         setNewTier({ name: "", category: "Core", duration: "weekly", days: 5, mealType: "B", discountPrice: 0 });
         setSelections({ "B": [] });
-        fetchTiers();
+        fetchTiers(tiersPage);
         
         // Refresh selected tier if it was edited
         if (editingTierId && selectedTier && selectedTier._id === editingTierId) {
@@ -267,7 +294,7 @@ export default function TiersPage() {
     }
   };
 
-  const availableCombos = ["B", "L", "D", "B,L", "L,D", "B,D", "B,L,D"];
+  const availableCombos = ["Breakfast Only", "Lunch Only", "Dinner Only", "Breakfast + Lunch", "Lunch + Dinner", "Breakfast + Dinner", "Breakfast + Lunch + Dinner"];
 
   const getTypeName = (t: string) => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner';
 
@@ -320,11 +347,11 @@ export default function TiersPage() {
         <div className="min-w-[800px] h-full flex flex-col">
           <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-100 bg-white text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0 sticky top-0 z-10 backdrop-blur-md bg-white/80">
             <div className="col-span-3">Tier Name</div>
-            <div className="col-span-2">Category</div>
+            <div className="col-span-1">Category</div>
             <div className="col-span-2">Duration / Days</div>
-            <div className="col-span-1">Meal Type</div>
+            <div className="col-span-3">Meal Type</div>
             <div className="col-span-2">Price</div>
-            <div className="col-span-2 text-right">Actions</div>
+            <div className="col-span-1 text-right">Actions</div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -332,26 +359,26 @@ export default function TiersPage() {
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="grid grid-cols-12 gap-4 px-8 py-5 border-b border-gray-50 items-center animate-pulse">
                   <div className="col-span-3"><div className="h-4 bg-gray-100 rounded w-3/4"></div></div>
-                  <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
-                  <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
                   <div className="col-span-1"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
+                  <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
+                  <div className="col-span-3"><div className="h-4 bg-gray-100 rounded w-1/2"></div></div>
                   <div className="col-span-2"><div className="h-4 bg-gray-100 rounded w-3/4"></div></div>
-                  <div className="col-span-2 flex justify-end"><div className="h-6 bg-gray-100 rounded-full w-12"></div></div>
+                  <div className="col-span-1 flex justify-end"><div className="h-6 bg-gray-100 rounded-full w-12"></div></div>
                 </div>
               ))
-            ) : filteredTiers.length === 0 ? (
+            ) : tiers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-12 text-center text-gray-400">
                 <p className="text-lg font-medium text-gray-900 mb-1">No Plan Tiers found</p>
                 <p className="text-sm">Try adjusting your search query or create a new tier.</p>
               </div>
             ) : (
-              filteredTiers.map((tier) => (
+              tiers.map((tier) => (
                 <div 
                   key={tier._id} 
                   className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-gray-50/50 items-center hover:bg-gray-50/50 transition-colors" 
                 >
-                  <div className="col-span-3 font-semibold text-gray-900">{tier.name}</div>
-                  <div className="col-span-2">
+                  <div className="col-span-3 font-semibold text-gray-900 pr-2">{tier.name}</div>
+                  <div className="col-span-1">
                     <span className="px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm">
                       {tier.category}
                     </span>
@@ -362,10 +389,12 @@ export default function TiersPage() {
                     </span>
                     <span className="text-sm text-gray-500 font-medium">{tier.days} Days</span>
                   </div>
-                  <div className="col-span-1">
-                    <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-600">
-                      {tier.mealType}
-                    </span>
+                  <div className="col-span-3 flex flex-wrap gap-1">
+                    {tier.mealType.split(' + ').map((m: string, idx: number) => (
+                      <span key={idx} className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-[11px] font-medium text-gray-600 whitespace-nowrap">
+                        {m}
+                      </span>
+                    ))}
                   </div>
                   <div className="col-span-2 flex flex-col">
                     {tier.discountPrice > 0 ? (
@@ -377,7 +406,7 @@ export default function TiersPage() {
                       <span className="text-sm font-bold text-gray-900">₹{tier.totalPrice?.toFixed(2) || '0.00'}</span>
                     )}
                   </div>
-                  <div className="col-span-2 text-right flex items-center justify-end gap-3">
+                  <div className="col-span-1 text-right flex items-center justify-end gap-3">
                     <button
                       onClick={async () => {
                         const res = await fetch(`/api/admin/tiers/${tier._id}`);
@@ -395,6 +424,31 @@ export default function TiersPage() {
                 </div>
               ))
             )}
+          </div>
+          
+          {/* Tiers Pagination */}
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center rounded-b-xl shrink-0">
+            <span className="text-sm text-gray-500 font-medium">Page {tiersPage} of {tiersTotalPages}</span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="secondary"
+                onClick={() => setTiersPage(p => Math.max(1, p - 1))}
+                disabled={tiersPage === 1 || isLoadingTiers}
+                className="px-4 py-2 text-sm !bg-white border-gray-200 hover:bg-gray-50 !text-gray-700 hover:!text-gray-900"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Prev
+              </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => setTiersPage(p => Math.min(tiersTotalPages, p + 1))}
+                disabled={tiersPage === tiersTotalPages || isLoadingTiers}
+                className="px-4 py-2 text-sm !bg-white border-gray-200 hover:bg-gray-50 !text-gray-700 hover:!text-gray-900"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
