@@ -76,10 +76,13 @@ export default function SettingsPage() {
     if (!file) return;
 
     setIsUploadingImage(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+      const { compressImage } = await import("@/lib/imageUtils");
+      const compressedFile = await compressImage(file, 800, 0.8);
+      
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+
       const res = await fetch("/api/admin/upload", {
         method: "POST",
         body: formData,

@@ -118,8 +118,11 @@ export default function BowlsPage() {
 
     setIsUploadingImage(true);
     try {
+      const { compressImage } = await import("@/lib/imageUtils");
+      const compressedFile = await compressImage(file, 1000, 0.8);
+      
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressedFile);
 
       const res = await fetch("/api/admin/upload", {
         method: "POST",

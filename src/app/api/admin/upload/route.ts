@@ -5,6 +5,8 @@ import connectToDatabase from "@/lib/db";
 import ImageModel from "@/models/Image";
 import crypto from "crypto";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

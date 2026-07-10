@@ -49,10 +49,10 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
         style={{ transformStyle: "preserve-3d" }}
       >
         {/* FRONT FACE (New Image Design) */}
-        <div className="absolute inset-0 backface-hidden bg-[#3F3F46] rounded-[24px] flex flex-col shadow-xl overflow-hidden border border-gray-800">
+        <div className={`absolute inset-0 backface-hidden bg-[#3F3F46] rounded-[24px] flex flex-col shadow-xl overflow-hidden border border-gray-800 transition-opacity duration-300 ${isFlipped ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
           
           {/* Top Banner */}
-          <div className={`w-full h-20 ${topColor} flex justify-between items-center px-6 shrink-0 z-10`}>
+          <div className={`w-full h-20 ${topColor} flex justify-between items-center px-6 shrink-0 relative`}>
             <span className="text-gray-900 text-sm font-bold tracking-[0.15em] uppercase">
               {phaseLabel}
             </span>
@@ -60,7 +60,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
           </div>
 
           {/* Image Area */}
-          <div className="relative w-full flex-1 -mt-1 z-0">
+          <div className="relative w-full flex-1 -mt-1">
             <Image 
               src={bowl.imageId?.url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=600&auto=format&fit=crop"} 
               alt={bowl.name}
@@ -72,7 +72,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
           </div>
 
           {/* Footer Area */}
-          <div className="w-full h-24 bg-[#3F3F46] flex justify-between items-center px-6 shrink-0 z-10 relative">
+          <div className="w-full h-24 bg-[#3F3F46] flex justify-between items-center px-6 shrink-0 relative">
             <span className="text-white text-xl md:text-2xl font-light tracking-wide uppercase line-clamp-1 mr-4">
               {bowl.name}
             </span>
@@ -83,7 +83,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
         </div>
 
         {/* BACK FACE (Light Theme - Details) */}
-        <div className="absolute inset-0 backface-hidden bg-white rounded-[24px] p-6 shadow-xl flex flex-col rotate-y-180 border border-gray-100 overflow-hidden">
+        <div className={`absolute inset-0 backface-hidden bg-white rounded-[24px] p-6 shadow-xl flex flex-col rotate-y-180 border border-gray-100 overflow-hidden transition-opacity duration-300 ${isFlipped ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           
           <h4 className="font-bold text-gray-900 text-xl mb-4 text-center border-b border-gray-100 pb-3 shrink-0">{bowl.name}</h4>
           
