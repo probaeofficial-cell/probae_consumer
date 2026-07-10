@@ -35,6 +35,17 @@ export async function POST(request: Request) {
       body.basePrice = Number(body.rawMaterialCost) + Number(body.fixedCost);
     }
 
+    if (body.baseCalories !== undefined) {
+      body.baseCalories = Math.round(Number(body.baseCalories));
+    }
+
+    if (body.macros) {
+      if (body.macros.protein !== undefined) body.macros.protein = Math.round(Number(body.macros.protein));
+      if (body.macros.carbs !== undefined) body.macros.carbs = Math.round(Number(body.macros.carbs));
+      if (body.macros.fat !== undefined) body.macros.fat = Math.round(Number(body.macros.fat));
+      if (body.macros.fiber !== undefined) body.macros.fiber = Math.round(Number(body.macros.fiber));
+    }
+
     const bowl = await Bowl.create(body);
     return NextResponse.json({ success: true, bowl }, { status: 201 });
   } catch (error) {

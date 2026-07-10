@@ -82,21 +82,21 @@ export default function BowlModal({ bowl, onClose }: BowlModalProps) {
 
             {/* Macros Grid */}
             <div className="grid grid-cols-4 gap-3 w-full mb-10">
-              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protein</span>
-                <span className="font-bold text-gray-900">{bowl.macros?.protein || 0}g</span>
+              <div className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Protein</span>
+                <span className="font-bold text-gray-900">{Math.round(bowl.macros?.protein || 0)}g</span>
               </div>
-              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Carbs</span>
-                <span className="font-bold text-gray-900">{bowl.macros?.carbs || 0}g</span>
+              <div className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Carbs</span>
+                <span className="font-bold text-gray-900">{Math.round(bowl.macros?.carbs || 0)}g</span>
               </div>
-              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fats</span>
-                <span className="font-bold text-gray-900">{bowl.macros?.fat || 0}g</span>
+              <div className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Fats</span>
+                <span className="font-bold text-gray-900">{Math.round(bowl.macros?.fat || 0)}g</span>
               </div>
-              <div className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center shadow-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fiber</span>
-                <span className="font-bold text-gray-900">{bowl.macros?.fiber || 0}g</span> {/* Placeholder for fiber */}
+              <div className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Fiber</span>
+                <span className="font-bold text-gray-900">{Math.round(bowl.macros?.fiber || 0)}g</span>
               </div>
             </div>
 

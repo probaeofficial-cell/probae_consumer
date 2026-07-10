@@ -91,26 +91,26 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
           <div className="grid grid-cols-2 gap-4 flex-1 content-start">
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Protein</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.protein || 0}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{Math.round(bowl.macros?.protein || 0)}g</span>
             </div>
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Carbs</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.carbs || 0}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{Math.round(bowl.macros?.carbs || 0)}g</span>
             </div>
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Fats</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.fat || 0}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{Math.round(bowl.macros?.fat || 0)}g</span>
             </div>
             <div className="bg-[#10B981]/10 rounded-2xl p-4 flex flex-col items-center justify-center">
               <span className="text-[11px] text-[#15803D] font-bold uppercase tracking-widest mb-2">Fiber</span>
-              <span className="font-bold text-gray-900 text-2xl">{bowl.macros?.fiber || 0}g</span>
+              <span className="font-bold text-gray-900 text-2xl">{Math.round(bowl.macros?.fiber || 0)}g</span>
             </div>
           </div>
 
           {/* Calories Large Display */}
           <div className="mt-4 mb-3 flex flex-col items-center justify-center bg-gray-50 rounded-2xl py-3 border border-gray-100 shrink-0">
             <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-1">Calories</span>
-            <span className="font-black text-gray-900 text-3xl">{bowl.baseCalories} <span className="text-base text-gray-400 font-medium">kcal</span></span>
+            <span className="font-black text-gray-900 text-3xl">{Math.round(bowl.baseCalories || 0)} <span className="text-base text-gray-400 font-medium">kcal</span></span>
           </div>
 
           {/* Price Footer */}
