@@ -73,7 +73,7 @@ export default function BowlCard({ bowl, index }: BowlCardProps) {
 
           {/* Footer Area */}
           <div className="w-full h-24 bg-[#3F3F46] flex justify-between items-center px-6 shrink-0 relative">
-            <span className="text-white text-xl md:text-2xl font-light tracking-wide uppercase line-clamp-1 mr-4">
+            <span className="text-white text-sm md:text-base font-medium tracking-wide uppercase line-clamp-2 leading-tight mr-4">
               {bowl.name}
             </span>
             <div className={`w-10 h-10 rounded-full border-2 ${borderColor} flex items-center justify-center shrink-0`}>
