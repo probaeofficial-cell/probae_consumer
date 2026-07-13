@@ -10,6 +10,7 @@ import "@/models/Image";
 import connectToDatabase from "@/lib/db";
 import FadeInUp from "@/components/animations/FadeInUp";
 import OptimizingSection from "@/components/animations/OptimizingSection";
+import FrameSequenceCanvas from "@/components/animations/FrameSequenceCanvasLoader";
 
 // This is a Server Component
 export default async function LandingPage() {
@@ -123,8 +124,20 @@ export default async function LandingPage() {
             </div>
           </section>
 
-          {/* 2. MENU SECTION (Original Flip Cards) */}
-          <section className="bg-white rounded-[40px] pt-12 md:pt-20 pb-24 md:pb-32 px-0 md:px-12 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] flex flex-col relative z-20">
+          {/* 2. BOWL DECONSTRUCTION — scroll-pinned canvas frame sequence */}
+          <FrameSequenceCanvas
+            frameCount={240}
+            frameBasePath="/frames/frame_"
+            frameExtension="jpg"
+            frameDigits={3}
+            scrollHeight="300vh"
+            overlayText="Every ingredient, precisely placed."
+            backgroundColor="#0f0f0f"
+          />
+
+          {/* 3. MENU SECTION (Original Flip Cards) */}
+          <section className="bg-white rounded-t-[40px] pt-12 md:pt-20 pb-24 md:pb-32 px-0 md:px-12 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] flex flex-col relative z-20" style={{ marginTop: "-2px" }}>
+
             <FadeInUp className="px-8 md:px-0 text-center mb-10 md:mb-16 flex flex-col items-center max-w-3xl mx-auto">
               <div className="text-[#15803D] mb-4">
                 <Utensils className="w-8 h-8 md:w-10 md:h-10 mx-auto" strokeWidth={2.5} />
