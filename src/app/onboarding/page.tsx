@@ -42,6 +42,7 @@ export default function OnboardingPage() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
+  const [latestPlanRequest, setLatestPlanRequest] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -92,6 +93,9 @@ export default function OnboardingPage() {
 
             if (data.onboardingStep) {
               setStep(data.onboardingStep);
+            }
+            if (data.latestPlanRequest) {
+              setLatestPlanRequest(data.latestPlanRequest);
             }
 
             // If user is at Step 5 or 6, they need the `plans` array loaded to view them!
@@ -1726,12 +1730,16 @@ export default function OnboardingPage() {
                     <Check className="w-10 h-10 text-tertiary" strokeWidth={3} />
                   </div>
                   <h2 className="text-4xl font-bold text-white tracking-tight mb-4 font-headline">
-                    {selectedPlan ? "Order Received!" : "Custom Bowl Requested!"}
+                    {selectedPlan 
+                      ? "Order Received!" 
+                      : (latestPlanRequest?.status === "Resolved" ? "Custom Bowl Resolved!" : "Custom Bowl Requested!")}
                   </h2>
                   <p className="text-gray-400 text-lg">
                     {selectedPlan 
                       ? "Your personalised plan has been locked in. We will connect with you shortly."
-                      : "Our team has been notified of your custom bowl request and will connect with you personally."}
+                      : (latestPlanRequest?.status === "Resolved" 
+                          ? "Our team has resolved your request. Your assigned plan will be visible shortly."
+                          : "Our team has been notified of your custom bowl request and will connect with you personally.")}
                   </p>
                 </div>
 

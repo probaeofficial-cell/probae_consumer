@@ -114,18 +114,22 @@ function calculateCalorieProfile(data: any) {
     fiber,
   };
 }
+import PlanRequest from '@/models/PlanRequest';
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
     const ipAddress = getClientIp(request);
 
-    const user = await User.findOne({ ipAddress }).sort({ createdAt: -1 });
+    const user = await User.findOne({ ipAddress }).sort({ createdAt: -1 }).lean();
     if (!user) {
       return NextResponse.json({ success: false, message: "No profile found" }, { status: 404 });
     }
+    
+    // Check if user has a pending custom bowl request
+    const latestRequest = await PlanRequest.findOne({ userIp: ipAddress }).sort({ createdAt: -1 }).lean();
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({ success: true, data: { ...user, latestPlanRequest: latestRequest || null } });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
