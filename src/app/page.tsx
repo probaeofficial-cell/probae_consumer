@@ -31,8 +31,8 @@ export default async function LandingPage() {
     if (dBowls[i]) interleavedBowls.push(dBowls[i]);
   }
   
-  // Serialize ObjectId to string for client component and limit to 10 bowls
-  const serializedBowls = interleavedBowls.slice(0, 10).map((bowl: any) => ({
+  // Serialize ObjectId to string for client component
+  const serializedBowls = interleavedBowls.map((bowl: any) => ({
     _id: bowl._id.toString(),
     name: bowl.name,
     baseCalories: bowl.baseCalories,

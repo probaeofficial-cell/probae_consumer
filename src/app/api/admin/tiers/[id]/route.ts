@@ -1,6 +1,7 @@
 import connectToDatabase from "@/lib/db";
 import PlanTier from "@/models/PlanTier";
-import Bowl from "@/models/Bowl"; // Register Bowl model for population
+import "@/models/Bowl"; // Register Bowl model for population
+import "@/models/Image"; // Register Image model
 import { NextResponse } from "next/server";
 
 
@@ -46,5 +47,26 @@ export async function PATCH(
   } catch (error) {
     console.error("Update tier error:", error);
     return NextResponse.json({ error: "Failed to update plan tier" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectToDatabase();
+    const { id } = await params;
+    
+    const deletedTier = await PlanTier.findByIdAndUpdate(id, { isDeleted: true });
+    
+    if (!deletedTier) {
+      return NextResponse.json({ error: "Plan Tier not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("Delete tier error:", error);
+    return NextResponse.json({ error: "Failed to delete plan tier" }, { status: 500 });
   }
 }
