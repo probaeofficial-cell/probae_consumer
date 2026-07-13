@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
     const search = searchParams.get("search") || "";
 
-    const query: any = {};
+    const query: any = { isDeleted: { $ne: true } };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },

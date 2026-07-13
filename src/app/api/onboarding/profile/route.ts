@@ -77,18 +77,17 @@ function calculateCalorieProfile(data: any) {
   // Protein (g/kg)
   let proteinFactor = 1.6;
 
-  switch (data.goal) {
-    case 'Weight Loss':
-      proteinFactor = 2.0;
-      break;
-
-    case 'Muscle Gain':
-      proteinFactor = 2.2;
-      break;
-
-    // Maintain Weight
-    default:
-      proteinFactor = 1.6;
+  if (data.activityLevel === 'Sedentary' || data.activityLevel === 'Lightly Active') {
+    if (data.goal === 'Maintain Weight' || data.goal === 'Weight Loss') {
+      proteinFactor = data.activityLevel === 'Sedentary' ? 0.8 : 1.0;
+    } else {
+      // Muscle Gain not allowed in UI, but fallback to 1.6 if bypassed
+      proteinFactor = 1.6; 
+    }
+  } else if (data.activityLevel === 'Active') {
+    proteinFactor = 1.5;
+  } else if (data.activityLevel === 'Very Active' || data.activityLevel === 'Athlete') {
+    proteinFactor = 2.0;
   }
 
   const protein = Math.round(weight * proteinFactor);
@@ -115,18 +114,22 @@ function calculateCalorieProfile(data: any) {
     fiber,
   };
 }
+import PlanRequest from '@/models/PlanRequest';
 
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
     const ipAddress = getClientIp(request);
 
-    const user = await User.findOne({ ipAddress }).sort({ createdAt: -1 });
+    const user = await User.findOne({ ipAddress }).sort({ createdAt: -1 }).lean();
     if (!user) {
       return NextResponse.json({ success: false, message: "No profile found" }, { status: 404 });
     }
+    
+    // Check if user has a pending custom bowl request
+    const latestRequest = await PlanRequest.findOne({ userIp: ipAddress }).sort({ createdAt: -1 }).lean();
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({ success: true, data: { ...user, latestPlanRequest: latestRequest || null } });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

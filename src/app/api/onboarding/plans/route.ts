@@ -21,7 +21,8 @@ export async function POST(req: Request) {
 
     const query: any = {
       duration: new RegExp(`^${duration}$`, 'i'), 
-      days 
+      days,
+      isDeleted: { $ne: true }
     };
 
     if (mealSlots && Array.isArray(mealSlots)) {

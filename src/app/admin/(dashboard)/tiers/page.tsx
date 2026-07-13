@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2, Search } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2, Search, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
@@ -68,8 +68,21 @@ export default function TiersPage() {
     mealType: "B",
     discountPrice: 0,
   });
+  const [isDeletingTierId, setIsDeletingTierId] = useState<string | null>(null);
   
   const [selections, setSelections] = useState<Record<string, Bowl[]>>({ "B": [] });
+
+  const getUiDaysCount = (duration: string, days: number) => {
+    return days; // UI slots always equal days per week (auto-expansion handles the rest)
+  };
+
+  const getTotalDeliveredDays = (duration: string, daysPerWeek: number) => {
+    if (duration.toLowerCase() === 'monthly') {
+      return (daysPerWeek * 4) + 2;
+    }
+    return daysPerWeek;
+  };
+
 
   // Bowls pagination state (inside side-sheet)
   const [bowls, setBowls] = useState<Bowl[]>([]);
@@ -188,11 +201,24 @@ export default function TiersPage() {
 
   const handleDaysChange = (days: number) => {
     setNewTier(prev => ({ ...prev, days }));
-    // Trim excess bowls if days are reduced
     setSelections(prev => {
       const next: Record<string, Bowl[]> = {};
+      const uiLimit = getUiDaysCount(newTier.duration, days);
       Object.keys(prev).forEach(type => {
-        next[type] = prev[type].slice(0, days);
+        const currentBowls = prev[type] || [];
+        if (uiLimit < currentBowls.length) {
+          next[type] = currentBowls.slice(0, uiLimit);
+        } else if (uiLimit > currentBowls.length && currentBowls.length > 0) {
+          const extendedBowls = [...currentBowls];
+          while (extendedBowls.length < uiLimit) {
+            const itemsToAdd = uiLimit - extendedBowls.length;
+            const sliceToCopy = currentBowls.slice(0, Math.min(7, itemsToAdd));
+            extendedBowls.push(...sliceToCopy);
+          }
+          next[type] = extendedBowls;
+        } else {
+          next[type] = currentBowls;
+        }
       });
       return next;
     });
@@ -201,8 +227,9 @@ export default function TiersPage() {
   const handleAddBowl = (type: string, bowl: Bowl) => {
     setSelections(prev => {
       const current = prev[type] || [];
-      if (current.length >= newTier.days) {
-        showAlert('info', `Maximum of ${newTier.days} bowls allowed for this section.`);
+      const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
+      if (current.length >= uiLimit) {
+        showAlert('info', `Maximum of ${uiLimit} bowls allowed for this section.`);
         return prev;
       }
       return { ...prev, [type]: [...current, bowl] };
@@ -226,10 +253,37 @@ export default function TiersPage() {
     });
   };
 
+  const expandBowls = (bowls: Bowl[], duration: string, daysPerWeek: number) => {
+    if (duration === 'weekly') return bowls; // exactly `daysPerWeek` bowls
+    
+    // For monthly
+    const baseWeek = bowls.slice(0, daysPerWeek);
+    // Auto-select day 1 and day 2 for the extra 2 days at the end of the month
+    const extra = baseWeek.slice(0, 2); 
+    
+    const expanded = [];
+    const fullWeeks = 4; // Monthly is always 4 weeks
+    for (let i = 0; i < fullWeeks; i++) {
+      expanded.push(...baseWeek);
+    }
+    expanded.push(...extra);
+    return expanded;
+  };
+
+  const contractBowls = (bowls: Bowl[], duration: string, daysPerWeek: number) => {
+    if (duration === 'weekly') return bowls;
+    
+    // For monthly, db has (daysPerWeek * 4) + 2 bowls
+    // We only need the base week for the UI
+    const baseWeek = bowls.slice(0, daysPerWeek);
+    return baseWeek;
+  };
+
   const calculateTotal = () => {
     let sum = 0;
     Object.values(selections).forEach(bucket => {
-      bucket.forEach(bowl => {
+      const expanded = expandBowls(bucket, newTier.duration, newTier.days);
+      expanded.forEach(bowl => {
         sum += bowl.basePrice || 0;
       });
     });
@@ -241,11 +295,12 @@ export default function TiersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate strict day counts
+    // Validate strict day counts based on UI
+    const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
     for (const [type, bucket] of Object.entries(selections)) {
-      if (bucket.length !== newTier.days) {
+      if (bucket.length !== uiLimit) {
         const typeName = type === 'B' ? 'Breakfast' : type === 'L' ? 'Lunch' : 'Dinner';
-        showAlert('error', `Please select exactly ${newTier.days} bowls for ${typeName}.`);
+        showAlert('error', `Please select exactly ${uiLimit} bowls for ${typeName}.`);
         return;
       }
     }
@@ -257,7 +312,7 @@ export default function TiersPage() {
       
       const payloadSelections = Object.entries(selections).map(([type, bowls]) => ({
         type,
-        bowls: bowls.map(b => b._id)
+        bowls: expandBowls(bowls, newTier.duration, newTier.days).map(b => b._id)
       }));
 
       const res = await fetch(url, {
@@ -291,6 +346,28 @@ export default function TiersPage() {
       showAlert('error', "An unexpected error occurred.");
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteTier = async () => {
+    if (!isDeletingTierId) return;
+    try {
+      const res = await fetch(`/api/admin/tiers/${isDeletingTierId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert('success', 'Plan Tier deleted successfully.');
+        setIsDeletingTierId(null);
+        fetchTiers(tiersPage);
+      } else {
+        showAlert('error', data.error || 'Failed to delete Plan Tier.');
+        setIsDeletingTierId(null);
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert('error', 'An unexpected error occurred.');
+      setIsDeletingTierId(null);
     }
   };
 
@@ -385,9 +462,9 @@ export default function TiersPage() {
                   </div>
                   <div className="col-span-2">
                     <span className="px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 capitalize shadow-sm mr-2">
-                      {tier.duration}
+                      {tier.duration.toLowerCase()}
                     </span>
-                    <span className="text-sm text-gray-500 font-medium">{tier.days} Days</span>
+                    <span className="text-sm text-gray-500 font-medium">{getTotalDeliveredDays(tier.duration, tier.days)} Days</span>
                   </div>
                   <div className="col-span-3 flex flex-wrap gap-1">
                     {tier.mealType.split(' + ').map((m: string, idx: number) => (
@@ -419,6 +496,12 @@ export default function TiersPage() {
                       className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
                     >
                       <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setIsDeletingTierId(tier._id)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -459,6 +542,20 @@ export default function TiersPage() {
         onClick={() => setIsDrawerOpen(false)}
       />
 
+      {/* Delete Confirmation Modal */}
+      {isDeletingTierId && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Tier?</h3>
+            <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this plan tier? This action cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" onClick={() => setIsDeletingTierId(null)}>Cancel</Button>
+              <Button variant="primary" className="!bg-red-600 hover:!bg-red-700 !shadow-red-600/20 !text-white hover:!text-white hover:!border-transparent" onClick={handleDeleteTier}>Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Creation Side-Sheet (Drawer) */}
       <div className={`fixed top-0 right-0 h-full w-full sm:w-[600px] bg-white shadow-2xl transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-[70] ${isDrawerOpen ? "translate-x-0" : "translate-x-full"} flex flex-col`}>
         <div className="p-6 md:px-8 border-b border-gray-100 flex justify-between items-center shrink-0">
@@ -494,15 +591,32 @@ export default function TiersPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Duration</label>
-                <select value={newTier.duration} onChange={e => setNewTier({...newTier, duration: e.target.value})} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer">
+                <select 
+                  value={newTier.duration} 
+                  onChange={e => {
+                    const dur = e.target.value;
+                    setNewTier({...newTier, duration: dur});
+                    // Re-calculate selections limit based on new duration (will trigger re-render and handleDaysChange)
+                    handleDaysChange(newTier.days);
+                  }} 
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer"
+                >
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Days</label>
-                <input required type="number" min="1" max="31" value={newTier.days} onChange={e => handleDaysChange(Number(e.target.value))} className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900" placeholder="E.g. 5" />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Days per Week</label>
+                <select 
+                  value={newTier.days} 
+                  onChange={e => handleDaysChange(Number(e.target.value))} 
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer"
+                >
+                  <option value={5}>5 Days</option>
+                  <option value={6}>6 Days</option>
+                  <option value={7}>7 Days</option>
+                </select>
               </div>
 
               <div>
@@ -551,12 +665,14 @@ export default function TiersPage() {
 
               {/* Selection Buckets */}
               <div className="space-y-6">
-                {Object.entries(selections).map(([type, bucketBowls]) => (
+                {Object.entries(selections).map(([type, bucketBowls]) => {
+                  const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
+                  return (
                   <div key={type} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
                     <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex justify-between items-center">
                       <h3 className="font-bold text-gray-900">{getTypeName(type)} Schedule</h3>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${bucketBowls.length === newTier.days ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {bucketBowls.length} / {newTier.days} Selected
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${bucketBowls.length === uiLimit ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {bucketBowls.length} / {uiLimit} Selected
                       </span>
                     </div>
                     
@@ -594,24 +710,60 @@ export default function TiersPage() {
                             <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
                             <p className="text-xs text-gray-500">₹{item.basePrice?.toFixed(2) || '0.00'}</p>
                           </div>
+                          {idx >= 7 && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold uppercase tracking-wider hidden sm:block">
+                              Extra Day
+                            </span>
+                          )}
                           <button 
                             type="button" 
                             onClick={() => handleRemoveBowl(type, idx)}
                             className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       ))}
+                      
+                      {newTier.duration === 'monthly' && bucketBowls.slice(0, 2).map((item, idx) => (
+                        <div 
+                          key={`auto-${item._id}-${idx}`}
+                          className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm opacity-80"
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <Info className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div className="w-12 text-center shrink-0">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Day</span>
+                            <span className="font-bold text-gray-500">{newTier.days + idx + 1}</span>
+                          </div>
+                          
+                          <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 shrink-0 border border-gray-300">
+                            {item.imageId?.url ? (
+                              <img src={item.imageId.url} alt={item.name} className="w-full h-full object-cover grayscale-[20%]" />
+                            ) : (
+                              <BowlIcon className="w-5 h-5 text-gray-400 m-auto mt-2.5" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-600 truncate">{item.name}</p>
+                            <p className="text-xs text-gray-400">₹{item.basePrice?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wider hidden sm:block">
+                            Auto Selected
+                          </span>
+                        </div>
+                      ))}
 
-                      {bucketBowls.length < newTier.days && (
+                      {bucketBowls.length < uiLimit && (
                         <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-sm font-medium text-gray-400 bg-gray-50/50">
-                          Add {newTier.days - bucketBowls.length} more bowl{newTier.days - bucketBowls.length > 1 ? 's' : ''} from the catalog below
+                          Add {uiLimit - bucketBowls.length} more bowl{uiLimit - bucketBowls.length > 1 ? 's' : ''} from the catalog below
                         </div>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Bowl Catalog */}
@@ -764,7 +916,7 @@ export default function TiersPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Days</p>
-                    <p className="text-gray-900 font-medium">{selectedTier.days} Days</p>
+                    <p className="text-gray-900 font-medium">{getTotalDeliveredDays(selectedTier.duration, selectedTier.days)} Days</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Meal Type</p>
@@ -811,16 +963,16 @@ export default function TiersPage() {
               ))}
             </div>
 
-            <div className="p-6 md:px-8 border-t border-gray-100 shrink-0 bg-white flex justify-end">
+            <div className="p-6 md:px-8 border-t border-gray-100 shrink-0 bg-white flex gap-3 justify-end">
               <Button 
-                variant="primary" 
-                className="w-full justify-center shadow-md shadow-primary/20 hover:shadow-lg transition-all"
+                variant="secondary" 
+                className="flex-1 justify-center transition-all bg-gray-50 border-gray-200 !text-gray-700 hover:bg-gray-100 hover:!text-gray-900"
                 onClick={() => {
-                  setEditingTierId(selectedTier._id);
+                  setEditingTierId(null);
                   setNewTier({
-                    name: selectedTier.name,
+                    name: selectedTier.name + " (Copy)",
                     category: selectedTier.category || "Core",
-                    duration: selectedTier.duration,
+                    duration: selectedTier.duration.toLowerCase(),
                     days: selectedTier.days,
                     mealType: selectedTier.mealType,
                     discountPrice: selectedTier.discountPrice || 0,
@@ -828,10 +980,37 @@ export default function TiersPage() {
                   // Reconstruct selections state
                   const newSelections: Record<string, Bowl[]> = {};
                   (selectedTier.selections || []).forEach(sel => {
-                    newSelections[sel.type] = sel.bowls;
+                    newSelections[sel.type] = contractBowls(sel.bowls, selectedTier.duration.toLowerCase(), selectedTier.days);
                   });
                   setSelections(newSelections);
                   setIsDrawerOpen(true);
+                  setIsPreviewOpen(false);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Duplicate
+              </Button>
+              <Button 
+                variant="primary" 
+                className="flex-1 justify-center shadow-md shadow-primary/20 hover:shadow-lg transition-all"
+                onClick={() => {
+                  setEditingTierId(selectedTier._id);
+                  setNewTier({
+                    name: selectedTier.name,
+                    category: selectedTier.category || "Core",
+                    duration: selectedTier.duration.toLowerCase(),
+                    days: selectedTier.days,
+                    mealType: selectedTier.mealType,
+                    discountPrice: selectedTier.discountPrice || 0,
+                  });
+                  // Reconstruct selections state
+                  const newSelections: Record<string, Bowl[]> = {};
+                  (selectedTier.selections || []).forEach(sel => {
+                    newSelections[sel.type] = contractBowls(sel.bowls, selectedTier.duration.toLowerCase(), selectedTier.days);
+                  });
+                  setSelections(newSelections);
+                  setIsDrawerOpen(true);
+                  setIsPreviewOpen(false);
                 }}
               >
                 <Edit className="w-4 h-4 mr-2" />

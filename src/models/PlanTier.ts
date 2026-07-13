@@ -12,6 +12,7 @@ export interface IPlanTier extends Document {
   }[];
   totalPrice: number;
   discountPrice?: number;
+  isDeleted?: boolean;
 }
 
 const PlanTierSchema: Schema = new Schema({
@@ -26,6 +27,7 @@ const PlanTierSchema: Schema = new Schema({
   }],
   totalPrice: { type: Number, required: true, default: 0 },
   discountPrice: { type: Number, default: 0 },
+  isDeleted: { type: Boolean, default: false },
 });
 
 export default mongoose.models.PlanTier || mongoose.model<IPlanTier>("PlanTier", PlanTierSchema);
