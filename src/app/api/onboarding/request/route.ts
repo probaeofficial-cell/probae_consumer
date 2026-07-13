@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import PlanRequest from "@/models/PlanRequest";
 import Notification from "@/models/Notification";
+import User from "@/models/User";
 import connectToDatabase from "@/lib/db";
 
 export async function POST(req: Request) {
@@ -8,7 +9,6 @@ export async function POST(req: Request) {
     await connectToDatabase();
     const body = await req.json();
     
-    // Attempt to extract IP
     const userIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
 
     const newRequest = new PlanRequest({
@@ -24,6 +24,18 @@ export async function POST(req: Request) {
       type: "enquiry",
       link: "/admin/enquiries"
     });
+
+    // Update user's onboarding step to 6 so it persists on reload
+    let ipToSearch = userIp;
+    if (ipToSearch.includes(',')) {
+      ipToSearch = ipToSearch.split(',')[0].trim();
+    }
+    
+    await User.findOneAndUpdate(
+      { ipAddress: ipToSearch },
+      { $set: { onboardingStep: 6, onboardingCompleted: true } },
+      { sort: { createdAt: -1 } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

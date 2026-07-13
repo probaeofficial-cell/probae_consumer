@@ -41,6 +41,7 @@ export default function OnboardingPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -376,6 +377,34 @@ export default function OnboardingPage() {
       console.error(err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCustomBowlOrder = async () => {
+    setIsSubmittingCustom(true);
+    try {
+      const res = await fetch("/api/onboarding/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name || "Unknown",
+          phone: formData.phone || "Unknown",
+          filters: {
+            duration: formData.planDuration,
+            frequency: formData.planFrequency,
+            mealSlots: formData.mealSlots,
+            calorieTarget: getTotalPurchasedCalories(),
+          },
+          notes: "User requested a custom bowl instead of the standard plans.",
+        }),
+      });
+      if (res.ok) {
+        setStep(6);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingCustom(false);
     }
   };
 
@@ -1364,7 +1393,7 @@ export default function OnboardingPage() {
             
             {/* -------------------- STEP 5 (Plan Selection) -------------------- */}
             <div className={`transition-all duration-500 ${step === 5 ? 'block opacity-100' : 'hidden opacity-0 h-0 overflow-hidden'}`}>
-              <div className="max-w-4xl mx-auto">
+              <div className="max-w-6xl mx-auto">
                 <h2 className="text-3xl font-bold text-white tracking-tight mb-2 text-center">
                   {selectedPlan ? "Selected Tier" : "Select Your Tier"}
                 </h2>
@@ -1401,7 +1430,7 @@ export default function OnboardingPage() {
                     </div>
                   ) : (
                     <div className="w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                      <div className="flex gap-4 md:gap-6 mb-12 overflow-x-auto pb-6 snap-x snap-mandatory px-4 md:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {plans.map((plan) => {
                           const isCore = plan.category === "Core";
                           const bgColor = isCore ? "bg-[#4CAF50]" : "bg-[#8A3FD1]";
@@ -1414,7 +1443,7 @@ export default function OnboardingPage() {
                             <div 
                               key={plan._id} 
                               onClick={() => setSelectedPlan(plan._id)}
-                              className={`relative cursor-pointer rounded-3xl p-8 transition-all duration-300 border-2 ${selectedPlan === plan._id ? `${activeBorder} scale-[1.02]` : 'border-transparent'} ${bgColor}`}
+                              className={`relative cursor-pointer rounded-3xl p-6 lg:p-8 transition-all duration-300 border-2 snap-center shrink-0 w-[85vw] md:w-[60vw] lg:w-[500px] ${selectedPlan === plan._id ? `${activeBorder} scale-[1.02]` : 'border-transparent'} ${bgColor}`}
                             >
                               {selectedPlan === plan._id && (
                                 <div className="absolute top-4 right-4 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
@@ -1426,7 +1455,7 @@ export default function OnboardingPage() {
                                   Most Nutrient Dense
                                 </div>
                               )}
-                              <h3 className="text-4xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
+                              <h3 className="text-2xl xl:text-3xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
                               <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration} ({getTotalDeliveredDays(plan.duration, plan.days)} Days)</p>
                               
                               <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
@@ -1480,9 +1509,26 @@ export default function OnboardingPage() {
                             </div>
                           );
                         })}
+
+                        {/* Custom Bowl Card */}
+                        <div className="relative rounded-3xl p-6 lg:p-8 flex flex-col self-stretch bg-tertiary shadow-xl justify-center items-center text-center snap-center shrink-0 w-[85vw] md:w-[60vw] lg:w-[500px]">
+                          <h3 className="text-2xl font-black text-white mb-2">Want Something Else?</h3>
+                          <p className="text-white/90 font-medium mb-8">Get a fully customized bowl tailored exactly to your unique needs.</p>
+                          <button
+                            onClick={handleCustomBowlOrder}
+                            disabled={isSubmittingCustom}
+                            className="w-full bg-black/10 border-2 border-white text-white py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-tertiary transition-colors flex items-center justify-center shadow-sm"
+                          >
+                            {isSubmittingCustom ? (
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              "Order your custom bowl"
+                            )}
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex justify-center mt-12 mb-20">
+                      <div className="flex justify-center flex-col items-center gap-4 mt-12 mb-20">
                         <button 
                           onClick={() => setShowCheckoutModal(true)}
                           disabled={!selectedPlan || isSubmitting}
@@ -1491,10 +1537,7 @@ export default function OnboardingPage() {
                           {isSubmitting ? (
                             <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                           ) : (
-                            <>
-                              Checkout
-                              <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
-                            </>
+                            <>Lock in my plan <ArrowRight className="w-5 h-5" /></>
                           )}
                         </button>
                       </div>
@@ -1683,10 +1726,12 @@ export default function OnboardingPage() {
                     <Check className="w-10 h-10 text-tertiary" strokeWidth={3} />
                   </div>
                   <h2 className="text-4xl font-bold text-white tracking-tight mb-4 font-headline">
-                    Order Received!
+                    {selectedPlan ? "Order Received!" : "Custom Bowl Requested!"}
                   </h2>
                   <p className="text-gray-400 text-lg">
-                    Your personalised plan has been locked in. We will connect with you shortly.
+                    {selectedPlan 
+                      ? "Your personalised plan has been locked in. We will connect with you shortly."
+                      : "Our team has been notified of your custom bowl request and will connect with you personally."}
                   </p>
                 </div>
 
