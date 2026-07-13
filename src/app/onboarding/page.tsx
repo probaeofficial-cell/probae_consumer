@@ -8,6 +8,14 @@ import { motion } from "framer-motion";
 
 export default function OnboardingPage() {
   const router = useRouter();
+
+  const getTotalDeliveredDays = (duration: string, daysPerWeek: number) => {
+    if (duration.toLowerCase() === 'monthly') {
+      return (daysPerWeek * 4) + 2;
+    }
+    return daysPerWeek;
+  };
+
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customAllergy, setCustomAllergy] = useState("");
@@ -1330,7 +1338,7 @@ export default function OnboardingPage() {
                                 </div>
                               )}
                               <h3 className="text-4xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
-                              <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration}</p>
+                              <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration} ({getTotalDeliveredDays(plan.duration, plan.days)} Days)</p>
                               
                               <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
                                 <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>
@@ -1717,7 +1725,7 @@ export default function OnboardingPage() {
                         return (
                           <div key={plan._id} className={`relative rounded-3xl p-8 border-2 border-transparent ${bgColor}`}>
                             <h3 className="text-4xl font-bold text-white mb-2 mt-2">{plan.name}</h3>
-                            <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration}</p>
+                            <p className="text-white/90 text-sm mb-8">{plan.category} Plan - {plan.duration} ({getTotalDeliveredDays(plan.duration, plan.days)} Days)</p>
                             
                             <div className="bg-white/20 rounded-2xl p-6 mb-8 backdrop-blur-sm">
                               <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest text-center mb-2">Per Meal Average</p>

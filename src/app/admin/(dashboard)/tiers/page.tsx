@@ -72,8 +72,18 @@ export default function TiersPage() {
   
   const [selections, setSelections] = useState<Record<string, Bowl[]>>({ "B": [] });
 
-  const getUiDaysCount = (days: number) => {
-    return days <= 7 ? days : 7 + (days % 7);
+  const getUiDaysCount = (duration: string, days: number) => {
+    if (duration === 'monthly') {
+      return days + 2; // e.g., 5 days + 2 extra = 7 slots
+    }
+    return days; // exactly the days per week
+  };
+
+  const getTotalDeliveredDays = (duration: string, daysPerWeek: number) => {
+    if (duration.toLowerCase() === 'monthly') {
+      return (daysPerWeek * 4) + 2;
+    }
+    return daysPerWeek;
   };
 
 
@@ -196,7 +206,7 @@ export default function TiersPage() {
     setNewTier(prev => ({ ...prev, days }));
     setSelections(prev => {
       const next: Record<string, Bowl[]> = {};
-      const uiLimit = getUiDaysCount(days);
+      const uiLimit = getUiDaysCount(newTier.duration, days);
       Object.keys(prev).forEach(type => {
         const currentBowls = prev[type] || [];
         if (uiLimit < currentBowls.length) {
@@ -220,7 +230,7 @@ export default function TiersPage() {
   const handleAddBowl = (type: string, bowl: Bowl) => {
     setSelections(prev => {
       const current = prev[type] || [];
-      const uiLimit = getUiDaysCount(newTier.days);
+      const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
       if (current.length >= uiLimit) {
         showAlert('info', `Maximum of ${uiLimit} bowls allowed for this section.`);
         return prev;
@@ -246,13 +256,15 @@ export default function TiersPage() {
     });
   };
 
-  const expandBowls = (bowls: Bowl[], totalDays: number) => {
-    if (totalDays <= 7) return bowls.slice(0, totalDays);
-    const baseWeek = bowls.slice(0, 7);
-    const extra = bowls.slice(7);
+  const expandBowls = (bowls: Bowl[], duration: string, daysPerWeek: number) => {
+    if (duration === 'weekly') return bowls; // exactly `daysPerWeek` bowls
+    
+    // For monthly
+    const baseWeek = bowls.slice(0, daysPerWeek);
+    const extra = bowls.slice(daysPerWeek); // exactly 2 bowls
     
     const expanded = [];
-    const fullWeeks = Math.floor(totalDays / 7);
+    const fullWeeks = 4; // Monthly is always 4 weeks
     for (let i = 0; i < fullWeeks; i++) {
       expanded.push(...baseWeek);
     }
@@ -260,18 +272,19 @@ export default function TiersPage() {
     return expanded;
   };
 
-  const contractBowls = (bowls: Bowl[], totalDays: number) => {
-    if (totalDays <= 7) return bowls;
-    const baseWeek = bowls.slice(0, 7);
-    const extraCount = totalDays % 7;
-    const extra = extraCount > 0 ? bowls.slice(-extraCount) : [];
+  const contractBowls = (bowls: Bowl[], duration: string, daysPerWeek: number) => {
+    if (duration === 'weekly') return bowls;
+    
+    // For monthly, db has (daysPerWeek * 4) + 2 bowls
+    const baseWeek = bowls.slice(0, daysPerWeek);
+    const extra = bowls.slice(-2); // The last 2 bowls
     return [...baseWeek, ...extra];
   };
 
   const calculateTotal = () => {
     let sum = 0;
     Object.values(selections).forEach(bucket => {
-      const expanded = expandBowls(bucket, newTier.days);
+      const expanded = expandBowls(bucket, newTier.duration, newTier.days);
       expanded.forEach(bowl => {
         sum += bowl.basePrice || 0;
       });
@@ -285,7 +298,7 @@ export default function TiersPage() {
     e.preventDefault();
     
     // Validate strict day counts based on UI
-    const uiLimit = getUiDaysCount(newTier.days);
+    const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
     for (const [type, bucket] of Object.entries(selections)) {
       if (bucket.length !== uiLimit) {
         const typeName = type === 'B' ? 'Breakfast' : type === 'L' ? 'Lunch' : 'Dinner';
@@ -301,7 +314,7 @@ export default function TiersPage() {
       
       const payloadSelections = Object.entries(selections).map(([type, bowls]) => ({
         type,
-        bowls: expandBowls(bowls, newTier.days).map(b => b._id)
+        bowls: expandBowls(bowls, newTier.duration, newTier.days).map(b => b._id)
       }));
 
       const res = await fetch(url, {
@@ -453,7 +466,7 @@ export default function TiersPage() {
                     <span className="px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 capitalize shadow-sm mr-2">
                       {tier.duration.toLowerCase()}
                     </span>
-                    <span className="text-sm text-gray-500 font-medium">{tier.days} Days</span>
+                    <span className="text-sm text-gray-500 font-medium">{getTotalDeliveredDays(tier.duration, tier.days)} Days</span>
                   </div>
                   <div className="col-span-3 flex flex-wrap gap-1">
                     {tier.mealType.split(' + ').map((m: string, idx: number) => (
@@ -585,9 +598,8 @@ export default function TiersPage() {
                   onChange={e => {
                     const dur = e.target.value;
                     setNewTier({...newTier, duration: dur});
-                    if (dur === 'monthly') {
-                      handleDaysChange(30);
-                    }
+                    // Re-calculate selections limit based on new duration (will trigger re-render and handleDaysChange)
+                    handleDaysChange(newTier.days);
                   }} 
                   className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer"
                 >
@@ -597,18 +609,16 @@ export default function TiersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Days</label>
-                <input 
-                  required 
-                  type="number" 
-                  min="1" 
-                  max="31" 
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Days per Week</label>
+                <select 
                   value={newTier.days} 
-                  disabled={newTier.duration === 'monthly'}
                   onChange={e => handleDaysChange(Number(e.target.value))} 
-                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 ${newTier.duration === 'monthly' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-gray-50 hover:bg-gray-50/80'}`}
-                  placeholder="E.g. 5" 
-                />
+                  className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-gray-900 appearance-none cursor-pointer"
+                >
+                  <option value={5}>5 Days</option>
+                  <option value={6}>6 Days</option>
+                  <option value={7}>7 Days</option>
+                </select>
               </div>
 
               <div>
@@ -658,7 +668,7 @@ export default function TiersPage() {
               {/* Selection Buckets */}
               <div className="space-y-6">
                 {Object.entries(selections).map(([type, bucketBowls]) => {
-                  const uiLimit = getUiDaysCount(newTier.days);
+                  const uiLimit = getUiDaysCount(newTier.duration, newTier.days);
                   return (
                   <div key={type} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
                     <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex justify-between items-center">
@@ -878,7 +888,7 @@ export default function TiersPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Days</p>
-                    <p className="text-gray-900 font-medium">{selectedTier.days} Days</p>
+                    <p className="text-gray-900 font-medium">{getTotalDeliveredDays(selectedTier.duration, selectedTier.days)} Days</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Meal Type</p>
@@ -942,7 +952,7 @@ export default function TiersPage() {
                   // Reconstruct selections state
                   const newSelections: Record<string, Bowl[]> = {};
                   (selectedTier.selections || []).forEach(sel => {
-                    newSelections[sel.type] = sel.bowls;
+                    newSelections[sel.type] = contractBowls(sel.bowls, selectedTier.duration.toLowerCase(), selectedTier.days);
                   });
                   setSelections(newSelections);
                   setIsDrawerOpen(true);
@@ -968,7 +978,7 @@ export default function TiersPage() {
                   // Reconstruct selections state
                   const newSelections: Record<string, Bowl[]> = {};
                   (selectedTier.selections || []).forEach(sel => {
-                    newSelections[sel.type] = sel.bowls;
+                    newSelections[sel.type] = contractBowls(sel.bowls, selectedTier.duration.toLowerCase(), selectedTier.days);
                   });
                   setSelections(newSelections);
                   setIsDrawerOpen(true);
