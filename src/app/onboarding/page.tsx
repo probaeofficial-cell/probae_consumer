@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home, X, Lock, Unlock } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Plus, Info, Sun, Moon, Utensils, Home, X, Lock, Unlock, Dumbbell, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -22,6 +22,7 @@ export default function OnboardingPage() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [calorieProfile, setCalorieProfile] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [showGymWarning, setShowGymWarning] = useState(false);
   const [isChartLoaded, setIsChartLoaded] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [customizedDips, setCustomizedDips] = useState<{[bowlId: string]: string}>({});
@@ -124,6 +125,12 @@ export default function OnboardingPage() {
   }, []);
 
   const updateField = (field: string, value: any) => {
+    if (field === "goal" && value === "Muscle Gain") {
+      if (formData.activityLevel === "Sedentary" || formData.activityLevel === "Lightly Active") {
+        setShowGymWarning(true);
+        return;
+      }
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -147,7 +154,11 @@ export default function OnboardingPage() {
         const newArray = [...current, value];
         if (field === "mealSlots") {
           const newCalories = { ...prev.mealCalories };
-          newCalories[value] = calorieProfile?.total ? Math.round(calorieProfile.total / 3) : 500;
+          if (calorieProfile?.total) {
+            newCalories[value] = Math.round(calorieProfile.total / 3);
+          } else {
+            newCalories[value] = 500;
+          }
           return { ...prev, [field]: newArray, mealCalories: newCalories };
         }
         return { ...prev, [field]: newArray };
@@ -160,8 +171,8 @@ export default function OnboardingPage() {
       const newCalories = { ...prev.mealCalories };
       let validValue = newValue;
 
-      if (prev.mealSlots.length === 3) {
-        // Auto-balance logic for 3 meals
+      if (prev.mealSlots.length > 1) {
+        // Auto-balance logic for multiple meals
         const unlockedSlots = prev.mealSlots.filter(s => s !== slotId && !prev.lockedMeals[s]);
         const currentSumOfUnlocked = unlockedSlots.reduce((sum, s) => sum + (newCalories[s] || 0), 0);
         const minPossibleSumOfUnlocked = unlockedSlots.length * 100;
@@ -190,16 +201,43 @@ export default function OnboardingPage() {
           }
         }
       } else {
-        // 1 or 2 slots: independent, but total sum cannot exceed calorieProfile.total
-        const otherSlotsSum = prev.mealSlots
-          .filter(s => s !== slotId)
-          .reduce((sum, s) => sum + (newCalories[s] || 0), 0);
-          
-        const maxAllowed = (calorieProfile?.total || 3000) - otherSlotsSum;
-        validValue = Math.max(100, Math.min(maxAllowed, newValue));
+        // Only 1 slot: it can be adjusted independently up to total
+        validValue = Math.max(100, Math.min(calorieProfile?.total || 3000, newValue));
         newCalories[slotId] = validValue;
       }
 
+      return { ...prev, mealCalories: newCalories };
+    });
+  };
+
+  const handleTotalCalorieChange = (newTotalStr: string) => {
+    let newTotal = parseInt(newTotalStr) || 0;
+    
+    // Validation: Cannot exceed calorie profile total
+    const maxAllowed = calorieProfile?.total || 3000;
+    if (newTotal > maxAllowed) {
+      newTotal = maxAllowed;
+    }
+
+    setFormData((prev) => {
+      const newCalories = { ...prev.mealCalories };
+      const oldTotal = Object.values(newCalories).reduce((sum, val) => sum + val, 0) || 1;
+      
+      let remaining = newTotal;
+      const slots = prev.mealSlots;
+      
+      for (let i = 0; i < slots.length; i++) {
+        const slot = slots[i];
+        if (i === slots.length - 1) {
+          newCalories[slot] = remaining; // last slot takes the remainder
+        } else {
+          const ratio = (newCalories[slot] || 0) / oldTotal;
+          const assigned = Math.round(newTotal * ratio);
+          newCalories[slot] = assigned;
+          remaining -= assigned;
+        }
+      }
+      
       return { ...prev, mealCalories: newCalories };
     });
   };
@@ -247,11 +285,11 @@ export default function OnboardingPage() {
         setFormData(prev => {
           const newCalories = { ...prev.mealCalories };
           if (prev.mealSlots.length > 0) {
-            // If we just got the calorieProfile, and they have the default 500 calories
-            // We can update the newly added slots to be TDEE/3
-            prev.mealSlots.forEach(slot => {
+            // Assign 1/3 to each slot by default if it was newly added (i.e. had the default 500)
+            const perSlot = Math.round(data.calorieProfile.total / 3);
+            prev.mealSlots.forEach((slot) => {
               if (!newCalories[slot] || newCalories[slot] === 500) {
-                 newCalories[slot] = Math.round(data.calorieProfile.total / 3);
+                newCalories[slot] = perSlot;
               }
             });
           }
@@ -555,7 +593,51 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#111111] font-sans text-gray-100 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
+    <>
+      {showGymWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowGymWarning(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative bg-[#1A1A1A] border-2 border-primary/20 rounded-3xl p-8 max-w-sm w-full shadow-2xl overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+              <motion.div 
+                animate={{ rotate: [-10, 10, -10], scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(var(--primary),0.5)]"
+              >
+                <Dumbbell className="w-8 h-8 text-primary" strokeWidth={2.5} />
+              </motion.div>
+              <h3 className="text-2xl font-bold text-white tracking-tight">Hit the Gym!</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Hey man, it is physically impossible to gain muscle while being sedentary or lightly active. 
+                <span className="block mt-2 font-semibold text-white/90">Time to lift some heavy weights!</span>
+              </p>
+              <button 
+                onClick={() => setShowGymWarning(false)}
+                className="mt-6 w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors active:scale-95"
+              >
+                Got it
+              </button>
+            </div>
+            
+            {/* Background elements */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          </motion.div>
+        </div>
+      )}
+      <div className="min-h-screen bg-[#111111] font-sans text-gray-100 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
       
       {/* Background Square Grid */}
       <div 
@@ -1189,21 +1271,45 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
+                {/* Calories to Purchase - Moved above distribution */}
+                <div className="mt-6 mb-6">
+                  <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Total Purchased Calories</h3>
+                  <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 flex flex-col items-center shadow-inner">
+                    <p className="text-gray-400 text-sm text-center mb-6 leading-relaxed">
+                      Your goal requires <span className="text-white font-bold">{calorieProfile?.total || 0} kcal</span> daily. 
+                      You can adjust your intake per meal slot below.
+                    </p>
+                    <div className="flex flex-col items-center w-full">
+                      <div className="relative flex items-center justify-center group">
+                        <input
+                          type="number"
+                          value={getTotalPurchasedCalories() || ""}
+                          onChange={(e) => handleTotalCalorieChange(e.target.value)}
+                          className="w-48 bg-transparent text-white text-4xl font-black font-mono text-center focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-xl transition-all hover:bg-white/5 py-2"
+                        />
+                        <Edit className="absolute right-2 w-5 h-5 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      </div>
+                      <span className="text-xs text-tertiary font-bold tracking-widest mt-1">KCAL TOTAL</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Calorie Distribution UI */}
                 {formData.mealSlots.length > 0 && (
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest">Calorie Distribution</h3>
-                      {formData.mealSlots.length === 3 && (
-                        <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded border border-gray-700/50">
-                          Auto-balances to maintain total
-                        </span>
-                      )}
+                      <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded border border-gray-700/50">
+                        Auto-balances to maintain total
+                      </span>
                     </div>
                     <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 space-y-6">
-                      {formData.mealSlots.map((slotId) => {
+                      {[...formData.mealSlots].sort((a, b) => {
+                        const order: Record<string, number> = { "B-FAST": 1, "LUNCH": 2, "DINNER": 3 };
+                        return (order[a] || 99) - (order[b] || 99);
+                      }).map((slotId) => {
                         const isLocked = formData.lockedMeals[slotId];
-                        const showLock = formData.mealSlots.length === 3;
+                        const showLock = formData.mealSlots.length > 1;
                         return (
                           <div key={slotId} className="flex flex-col gap-2">
                             <div className="flex justify-between items-center">
@@ -1240,23 +1346,6 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Calories to Purchase - Moved below distribution */}
-                <div className="mt-6">
-                  <h3 className="text-[11px] font-bold text-[#E6D0BA]/80 uppercase tracking-widest mb-4">Total Purchased Calories</h3>
-                  <div className="bg-[#151515] rounded-2xl border border-gray-800/60 p-6 flex flex-col items-center shadow-inner">
-                    <p className="text-gray-400 text-sm text-center mb-6 leading-relaxed">
-                      Your goal requires <span className="text-white font-bold">{calorieProfile?.total || 0} kcal</span> daily. 
-                      You can adjust your intake per meal slot above.
-                    </p>
-                    <div className="flex flex-col items-center w-full">
-                      <div className="w-full bg-transparent text-white text-4xl font-black font-mono text-center focus:outline-none placeholder-gray-700">
-                        {getTotalPurchasedCalories()}
-                      </div>
-                      <span className="text-xs text-tertiary font-bold tracking-widest mt-1">KCAL TOTAL</span>
-                    </div>
-                  </div>
-                </div>
                   </div>
                 </div>
 
@@ -1463,7 +1552,10 @@ export default function OnboardingPage() {
                           </h3>
                           
                           <div className="space-y-12">
-                            {formData.mealSlots.map(slot => {
+                            {[...formData.mealSlots].sort((a, b) => {
+                              const order: Record<string, number> = { "B-FAST": 1, "LUNCH": 2, "DINNER": 3 };
+                              return (order[a] || 99) - (order[b] || 99);
+                            }).map(slot => {
                               const plan = plans.find(p => p._id === selectedPlan);
                               
                               let typeCode = slot;
@@ -1780,7 +1872,10 @@ export default function OnboardingPage() {
                   <div className="mb-12">
                     <h3 className="text-2xl font-bold text-white mb-8 text-center font-headline">Your Bowls</h3>
                     <div className="space-y-12">
-                      {formData.mealSlots.map(slot => {
+                      {[...formData.mealSlots].sort((a, b) => {
+                        const order: Record<string, number> = { "B-FAST": 1, "LUNCH": 2, "DINNER": 3 };
+                        return (order[a] || 99) - (order[b] || 99);
+                      }).map(slot => {
                         const plan = plans.find(p => p._id === selectedPlan);
                         
                         let typeCode = slot;
@@ -1956,6 +2051,7 @@ export default function OnboardingPage() {
           </motion.div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2, Search } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Salad as BowlIcon, Eye, Edit, GripVertical, Trash2, Search, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import Alert from "@/components/ui/Alert";
@@ -73,10 +73,7 @@ export default function TiersPage() {
   const [selections, setSelections] = useState<Record<string, Bowl[]>>({ "B": [] });
 
   const getUiDaysCount = (duration: string, days: number) => {
-    if (duration === 'monthly') {
-      return days + 2; // e.g., 5 days + 2 extra = 7 slots
-    }
-    return days; // exactly the days per week
+    return days; // UI slots always equal days per week (auto-expansion handles the rest)
   };
 
   const getTotalDeliveredDays = (duration: string, daysPerWeek: number) => {
@@ -261,7 +258,8 @@ export default function TiersPage() {
     
     // For monthly
     const baseWeek = bowls.slice(0, daysPerWeek);
-    const extra = bowls.slice(daysPerWeek); // exactly 2 bowls
+    // Auto-select day 1 and day 2 for the extra 2 days at the end of the month
+    const extra = baseWeek.slice(0, 2); 
     
     const expanded = [];
     const fullWeeks = 4; // Monthly is always 4 weeks
@@ -276,9 +274,9 @@ export default function TiersPage() {
     if (duration === 'weekly') return bowls;
     
     // For monthly, db has (daysPerWeek * 4) + 2 bowls
+    // We only need the base week for the UI
     const baseWeek = bowls.slice(0, daysPerWeek);
-    const extra = bowls.slice(-2); // The last 2 bowls
-    return [...baseWeek, ...extra];
+    return baseWeek;
   };
 
   const calculateTotal = () => {
@@ -722,8 +720,38 @@ export default function TiersPage() {
                             onClick={() => handleRemoveBowl(type, idx)}
                             className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
+                        </div>
+                      ))}
+                      
+                      {newTier.duration === 'monthly' && bucketBowls.slice(0, 2).map((item, idx) => (
+                        <div 
+                          key={`auto-${item._id}-${idx}`}
+                          className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm opacity-80"
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <Info className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div className="w-12 text-center shrink-0">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Day</span>
+                            <span className="font-bold text-gray-500">{newTier.days + idx + 1}</span>
+                          </div>
+                          
+                          <div className="w-10 h-10 rounded overflow-hidden bg-gray-200 shrink-0 border border-gray-300">
+                            {item.imageId?.url ? (
+                              <img src={item.imageId.url} alt={item.name} className="w-full h-full object-cover grayscale-[20%]" />
+                            ) : (
+                              <BowlIcon className="w-5 h-5 text-gray-400 m-auto mt-2.5" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-600 truncate">{item.name}</p>
+                            <p className="text-xs text-gray-400">₹{item.basePrice?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wider hidden sm:block">
+                            Auto Selected
+                          </span>
                         </div>
                       ))}
 

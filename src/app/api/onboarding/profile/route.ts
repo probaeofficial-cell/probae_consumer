@@ -77,18 +77,17 @@ function calculateCalorieProfile(data: any) {
   // Protein (g/kg)
   let proteinFactor = 1.6;
 
-  switch (data.goal) {
-    case 'Weight Loss':
-      proteinFactor = 2.0;
-      break;
-
-    case 'Muscle Gain':
-      proteinFactor = 2.2;
-      break;
-
-    // Maintain Weight
-    default:
-      proteinFactor = 1.6;
+  if (data.activityLevel === 'Sedentary' || data.activityLevel === 'Lightly Active') {
+    if (data.goal === 'Maintain Weight' || data.goal === 'Weight Loss') {
+      proteinFactor = data.activityLevel === 'Sedentary' ? 0.8 : 1.0;
+    } else {
+      // Muscle Gain not allowed in UI, but fallback to 1.6 if bypassed
+      proteinFactor = 1.6; 
+    }
+  } else if (data.activityLevel === 'Active') {
+    proteinFactor = 1.5;
+  } else if (data.activityLevel === 'Very Active' || data.activityLevel === 'Athlete') {
+    proteinFactor = 2.0;
   }
 
   const protein = Math.round(weight * proteinFactor);
