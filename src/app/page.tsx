@@ -128,16 +128,14 @@ export default async function LandingPage() {
           <FrameSequenceCanvas
             frameCount={240}
             frameBasePath="/frames/frame_"
-            frameExtension="jpg"
+            frameExtension="webp"
             frameDigits={3}
-            scrollHeight="300vh"
+            scrollHeight="350vh"
             overlayText="Every ingredient, precisely placed."
-            backgroundColor="#0f0f0f"
           />
 
           {/* 3. MENU SECTION (Original Flip Cards) */}
-          <section className="bg-white rounded-t-[40px] pt-12 md:pt-20 pb-24 md:pb-32 px-0 md:px-12 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] flex flex-col relative z-20" style={{ marginTop: "-2px" }}>
-
+          <section className="bg-white rounded-[40px] pt-12 md:pt-20 pb-24 md:pb-32 px-0 md:px-12 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] flex flex-col relative z-20">
             <FadeInUp className="px-8 md:px-0 text-center mb-10 md:mb-16 flex flex-col items-center max-w-3xl mx-auto">
               <div className="text-[#15803D] mb-4">
                 <Utensils className="w-8 h-8 md:w-10 md:h-10 mx-auto" strokeWidth={2.5} />
