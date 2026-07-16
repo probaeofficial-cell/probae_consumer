@@ -93,7 +93,7 @@ export default function FrameSequenceCanvas({
     const h   = c.offsetHeight;
     c.width   = Math.round(w * dpr);
     c.height  = Math.round(h * dpr);
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext("2d", { alpha: true, desynchronized: true });
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     const img = framesRef.current[idxRef.current];
@@ -107,21 +107,32 @@ export default function FrameSequenceCanvas({
   const renderFrame = useCallback((raw: number) => {
     const c = canvasRef.current;
     if (!c) return;
-    const ctx    = c.getContext("2d");
+    const ctx    = c.getContext("2d", { alpha: true, desynchronized: true });
     if (!ctx)    return;
     const frames = framesRef.current;
     if (!frames.length) return;
 
     const idx = Math.max(0, Math.min(frames.length - 1, Math.round(raw)));
     idxRef.current = idx;
-    const img = frames[idx];
-    if (!img?.complete || img.naturalWidth === 0) return;
+    
+    // Find the closest loaded frame (search backwards if exact frame is missing)
+    let bestImg = frames[idx];
+    if (!bestImg?.complete || bestImg.naturalWidth === 0) {
+      for (let i = idx - 1; i >= 0; i--) {
+        if (frames[i]?.complete && frames[i].naturalWidth > 0) {
+          bestImg = frames[i];
+          break;
+        }
+      }
+    }
+
+    if (!bestImg?.complete || bestImg.naturalWidth === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     const w   = c.width  / dpr;
     const h   = c.height / dpr;
     ctx.clearRect(0, 0, w, h);
-    drawContain(ctx, img, w, h);
+    drawContain(ctx, bestImg, w, h);
   }, []);
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -137,8 +148,21 @@ export default function FrameSequenceCanvas({
         new Promise<void>((res) => {
           const img = new Image();
           img.src   = buildSrc(frameBasePath, i + 1, frameDigits, frameExtension);
-          img.onload  = res as () => void;
-          img.onerror = res as () => void; // skip broken frames gracefully
+          img.onload  = () => {
+            if (img.decode) {
+              img.decode().then(() => {
+                res();
+                renderFrame(idxRef.current);
+              }).catch(() => {
+                res();
+                renderFrame(idxRef.current);
+              });
+            } else {
+              res();
+              renderFrame(idxRef.current);
+            }
+          };
+          img.onerror = () => { res(); }; // skip broken frames gracefully
           imgs[i] = img;
         });
 
@@ -175,33 +199,26 @@ export default function FrameSequenceCanvas({
       stInst = ScrollTrigger;
       gsap.registerPlugin(ScrollTrigger);
 
+      // Prevent ScrollTrigger from recalculating/unpinning when the mobile URL bar hides/shows
+      ScrollTrigger.config({ ignoreMobileResize: true });
+
       const wrap  = wrapRef.current!;
       const proxy = { frame: 0 };
 
       /**
        * GSAP Timeline (scrubbed by ScrollTrigger):
        *
-       *  ├── 0.00–0.12  Phase 1: bowl entrance
-       *  │               opacity 0→1, y 50→0, scale 0.92→1 (expo.out)
-       *  │
-       *  └── 0.12–1.00  Phase 2: frame scrub
+       *  └── 0.00–1.00  Frame scrub
        *                  frame 0 → (N-1), bidirectional via scrub
        */
       const tl = gsap.timeline({ paused: true });
-
-      tl.fromTo(
-        wrap,
-        { opacity: 0, y: 50, scale: 0.92, transformOrigin: "center center" },
-        { opacity: 1, y: 0,  scale: 1,    ease: "expo.out", duration: 0.12 },
-        0
-      );
 
       tl.to(
         proxy,
         {
           frame:    frameCount - 1,
           ease:     "none",
-          duration: 0.88,
+          duration: 1,
           onUpdate() {
             // Coalesce renders to one per animation frame via GSAP ticker
             if (!tickPendingRef.current) {
@@ -214,7 +231,7 @@ export default function FrameSequenceCanvas({
             }
           },
         },
-        0.12
+        0
       );
 
       ScrollTrigger.create({
@@ -222,7 +239,7 @@ export default function FrameSequenceCanvas({
         trigger:             sectionRef.current,
         start:               "top top",
         end:                 () => `+=${scrollHeight}`,
-        scrub:               2,     // 2 s momentum lag — cinematic feel
+        scrub:               0.5,   // Faster momentum for snappy feel
         pin:                 true,
         pinSpacing:          true,
         anticipatePin:       1,
@@ -235,17 +252,44 @@ export default function FrameSequenceCanvas({
       // there is no visible artefact even if the user scrolls immediately.
       setPhase("ready");
 
-      // Fire-and-forget: load the rest of the sequence in background batches.
+      // Fire-and-forget: Progressive/Interleaved loading strategy
       (async () => {
-        for (let i = 1; i < frameCount; i += 20) {
+        // Pass 1: Load first 12 frames sequentially (priority) to prevent gaps on immediate scroll
+        for (let i = 1; i <= Math.min(12, frameCount - 1); i++) {
           if (cancelled) return;
-          await Promise.all(
-            Array.from(
-              { length: Math.min(20, frameCount - i) },
-              (_, k) => loadOne(i + k)
-            )
-          );
+          await loadOne(i);
         }
+        
+        // Pass 2: Skeleton loading (Interleaved)
+        // Load every 4th frame (16, 20, 24...) to quickly cover the entire animation length.
+        // This guarantees that if the user scrolls fast on first load, they see a smooth 15fps
+        // animation instead of hitting a "buffering" wall and stuttering.
+        const skeletonStep = 4;
+        let batch: Promise<void>[] = [];
+        
+        for (let i = 16; i < frameCount; i += skeletonStep) {
+          if (cancelled) return;
+          batch.push(loadOne(i));
+          if (batch.length >= 6) {
+            await Promise.all(batch);
+            batch = [];
+          }
+        }
+        if (batch.length > 0) await Promise.all(batch);
+
+        // Pass 3: Fill in the remaining gaps (13, 14, 15, 17...) for the full 60fps experience
+        batch = [];
+        for (let i = 13; i < frameCount; i++) {
+          if (cancelled) return;
+          if (i % skeletonStep === 0) continue; // Already loaded in Pass 2
+          
+          batch.push(loadOne(i));
+          if (batch.length >= 6) {
+             await Promise.all(batch);
+             batch = [];
+          }
+        }
+        if (batch.length > 0) await Promise.all(batch);
       })();
     }
 
@@ -273,7 +317,7 @@ export default function FrameSequenceCanvas({
       style={{
         position:   "relative",
         width:      "100%",
-        height:     "100vh",
+        height:     "100svh", // Use short viewport height to avoid mobile resize jumps
         overflow:   "hidden",
         background: "transparent",
         zIndex:     10,
@@ -336,61 +380,72 @@ export default function FrameSequenceCanvas({
 
       {/* ════════════════════════════════════════════════════════════════════
           CANVAS WRAPPER
-          Starts at opacity:0 — GSAP Phase 1 animates it in on first scroll.
-          Full 100%×100% so the 16:9 frame fits with contain semantics.
+          Always visible (opacity: 1) so it scrolls into view naturally.
+          Tightly wraps the 16:9 canvas so blend gradients match perfectly.
       ════════════════════════════════════════════════════════════════════ */}
       <div
         ref={wrapRef}
         style={{
-          opacity:    0,
+          opacity:    1,
           position:   "relative",
           width:      "100%",
           height:     "100%",
-          willChange: "transform, opacity",
+          display:    "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          willChange: "transform",
         }}
       >
-        <canvas
-          ref={canvasRef}
-          aria-label="Bowl ingredient explosion animation"
-          role="img"
-          style={{ display: "block", width: "100%", height: "100%" }}
-        />
+        <div style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: "177.78svh", // 16/9 * 100svh
+          aspectRatio: "16 / 9",
+          maxHeight: "100svh",
+        }}>
+          <canvas
+            ref={canvasRef}
+            aria-label="Bowl ingredient explosion animation"
+            role="img"
+            style={{ display: "block", width: "100%", height: "100%" }}
+          />
 
-        {/* ── BLEND GRADIENTS ───────────────────────────────────────────────
-            These 4 overlays dissolve the dark frame edges into the page.
-            Colours match the surrounding sections exactly.                 */}
+          {/* ── BLEND GRADIENTS ───────────────────────────────────────────────
+              These 4 overlays dissolve the dark frame edges into the page.
+              Because this container is exactly 16:9, they sit right on the edges. */}
 
-        {/* Top — fades into hero / page grid background */}
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: "0 0 auto 0",
-          height: "22%",
-          background: `linear-gradient(to bottom, ${PAGE_BG} 0%, transparent 100%)`,
-          pointerEvents: "none", zIndex: 2,
-        }} />
+          {/* Top — fades into hero / page grid background */}
+          <div aria-hidden="true" style={{
+            position: "absolute", inset: "0 0 auto 0",
+            height: "22%",
+            background: `linear-gradient(to bottom, ${PAGE_BG} 0%, transparent 100%)`,
+            pointerEvents: "none", zIndex: 2,
+          }} />
 
-        {/* Bottom — fades into white menu section */}
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: "auto 0 0 0",
-          height: "28%",
-          background: `linear-gradient(to top, ${SECTION_BG} 0%, transparent 100%)`,
-          pointerEvents: "none", zIndex: 2,
-        }} />
+          {/* Bottom — fades into white menu section */}
+          <div aria-hidden="true" style={{
+            position: "absolute", inset: "auto 0 0 0",
+            height: "28%",
+            background: `linear-gradient(to top, ${SECTION_BG} 0%, transparent 100%)`,
+            pointerEvents: "none", zIndex: 2,
+          }} />
 
-        {/* Left edge */}
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: "0 auto 0 0",
-          width: "10%",
-          background: `linear-gradient(to right, ${PAGE_BG} 0%, transparent 100%)`,
-          pointerEvents: "none", zIndex: 2,
-        }} />
+          {/* Left edge */}
+          <div aria-hidden="true" style={{
+            position: "absolute", inset: "0 auto 0 0",
+            width: "10%",
+            background: `linear-gradient(to right, ${PAGE_BG} 0%, transparent 100%)`,
+            pointerEvents: "none", zIndex: 2,
+          }} />
 
-        {/* Right edge */}
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: "0 0 0 auto",
-          width: "10%",
-          background: `linear-gradient(to left, ${PAGE_BG} 0%, transparent 100%)`,
-          pointerEvents: "none", zIndex: 2,
-        }} />
+          {/* Right edge */}
+          <div aria-hidden="true" style={{
+            position: "absolute", inset: "0 0 0 auto",
+            width: "10%",
+            background: `linear-gradient(to left, ${PAGE_BG} 0%, transparent 100%)`,
+            pointerEvents: "none", zIndex: 2,
+          }} />
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════

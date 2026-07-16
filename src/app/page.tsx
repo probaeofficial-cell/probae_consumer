@@ -11,9 +11,12 @@ import connectToDatabase from "@/lib/db";
 import FadeInUp from "@/components/animations/FadeInUp";
 import OptimizingSection from "@/components/animations/OptimizingSection";
 import FrameSequenceCanvas from "@/components/animations/FrameSequenceCanvasLoader";
+import { preload } from "react-dom";
 
 // This is a Server Component
 export default async function LandingPage() {
+  // Preload the very first frame so the animation canvas can bootstrap instantly
+  preload("/frames/frame_001.webp", { as: "image", fetchPriority: "high" });
   await connectToDatabase();
   
   // Fetch active bowls and populate image
