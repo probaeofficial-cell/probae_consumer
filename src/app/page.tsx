@@ -58,13 +58,13 @@ export default async function LandingPage() {
         <main className="flex-1 flex flex-col overflow-y-auto hide-scrollbar">
           
           {/* 1. HERO SECTION */}
-          <section className="relative flex flex-col md:flex-row-reverse items-center justify-center pt-32 pb-12 px-6 md:px-12 md:pt-40 md:pb-24 gap-12 md:gap-20">
+          <section className="relative flex flex-col lg:flex-row-reverse items-center justify-center pt-32 pb-12 px-6 lg:px-12 lg:pt-40 lg:pb-24 gap-10 md:gap-14 lg:gap-20">
             
             {/* Circular Bowl Image with Slanted Banner (Right on Desktop) */}
-            <FadeInUp delay={0.2} duration={1} className="relative w-[280px] h-[280px] md:w-[400px] md:h-[400px] flex items-center justify-center mb-8 md:mb-0 shrink-0">
+            <FadeInUp delay={0.2} duration={1} className="relative w-[280px] h-[280px] md:w-[340px] md:h-[340px] lg:w-[400px] lg:h-[400px] flex items-center justify-center mb-8 lg:mb-0 shrink-0">
               {/* Slanted Green Banner */}
-              <div className="absolute top-1/2 left-1/2 w-[150%] md:w-[200%] h-12 md:h-16 bg-[#15803D] -translate-x-1/2 -translate-y-1/2 -rotate-12 flex items-center overflow-hidden z-0">
-                <div className="flex gap-4 text-white font-bold tracking-[0.2em] whitespace-nowrap opacity-90 text-sm md:text-lg animate-marquee">
+              <div className="absolute top-1/2 left-1/2 w-[150%] lg:w-[200%] h-12 lg:h-16 bg-[#15803D] -translate-x-1/2 -translate-y-1/2 -rotate-12 flex items-center overflow-hidden z-0">
+                <div className="flex gap-4 text-white font-bold tracking-[0.2em] whitespace-nowrap opacity-90 text-sm lg:text-lg animate-marquee">
                   <span>PROPER • LIVE</span>
                   <span>PROPER • LIVE</span>
                   <span>PROPER • LIVE</span>
@@ -75,7 +75,7 @@ export default async function LandingPage() {
               </div>
               
               {/* Circle Image */}
-              <div className="relative w-64 h-64 md:w-96 md:h-96 rounded-full overflow-hidden border-[6px] border-[#F8F9FA] z-10 shadow-2xl">
+              <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full overflow-hidden border-[6px] border-[#F8F9FA] z-10 shadow-2xl">
                 <Image 
                   src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop"
                   alt="Delicious Bowl"
@@ -87,9 +87,9 @@ export default async function LandingPage() {
             </FadeInUp>
 
             {/* Hero Text & CTA (Left on Desktop) */}
-            <div className="flex flex-col items-center md:items-start text-center md:text-left md:flex-1 max-w-xl">
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:flex-1 max-w-xl md:max-w-2xl">
               <FadeInUp delay={0.1} className="mb-10">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.15] md:leading-[1.1] tracking-tight">
+                <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold text-gray-900 leading-[1.15] lg:leading-[1.1] tracking-tight">
                   Eat for your <span className="text-[#15803D]">body</span>.<br/>
                   Not the <span className="relative inline-block">
                     crowd
@@ -108,20 +108,20 @@ export default async function LandingPage() {
               </FadeInUp>
 
               {/* Stats Row */}
-              <FadeInUp delay={0.4} className="w-full flex justify-between items-center px-2 py-4 md:py-6 border-t border-gray-200/60 md:gap-8 md:justify-start">
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-[#8B5CF6] font-bold text-lg md:text-2xl">50+</span>
-                  <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Bowls<br/>Crafted</span>
+              <FadeInUp delay={0.4} className="w-full flex justify-between items-center px-4 md:px-12 lg:px-2 py-4 lg:py-6 border-t border-gray-200/60 lg:gap-8 lg:justify-start">
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+                  <span className="text-[#8B5CF6] font-bold text-xl md:text-2xl">50+</span>
+                  <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Bowls<br/>Crafted</span>
                 </div>
                 <div className="h-8 md:h-12 w-px bg-gray-200/60"></div>
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-[#10B981] font-bold text-lg md:text-2xl">3</span>
-                  <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Daily<br/>Meals</span>
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+                  <span className="text-[#10B981] font-bold text-xl md:text-2xl">3</span>
+                  <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Daily<br/>Meals</span>
                 </div>
                 <div className="h-8 md:h-12 w-px bg-gray-200/60"></div>
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-[#F97316] font-bold text-lg md:text-2xl">100%</span>
-                  <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Balanced<br/>Macros</span>
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+                  <span className="text-[#F97316] font-bold text-xl md:text-2xl">100%</span>
+                  <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight mt-1">Balanced<br/>Macros</span>
                 </div>
               </FadeInUp>
             </div>
