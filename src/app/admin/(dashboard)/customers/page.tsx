@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Eye, ChevronLeft, ChevronRight, X, User as UserIcon } from "lucide-react";
+import { Search, Eye, ChevronLeft, ChevronRight, X, User as UserIcon, Trash2, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 
@@ -34,6 +34,9 @@ export default function CustomersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
   const [selectedCustomer, setSelectedCustomer] = useState<UserProfile | null>(null);
+  
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const limit = 10;
 
@@ -83,6 +86,29 @@ export default function CustomersPage() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCustomer) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${selectedCustomer._id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedCustomer(null);
+        setShowDeleteConfirm(false);
+        fetchCustomers(); // Refresh the list
+      } else {
+        alert("Failed to delete user: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("An error occurred while deleting the user.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -217,10 +243,57 @@ export default function CustomersPage() {
           <div className="flex flex-col h-full">
             <div className="p-6 md:px-8 border-b border-gray-100 flex justify-between items-center shrink-0">
               <h2 className="text-xl font-headline font-bold text-gray-900">Customer Details</h2>
-              <button onClick={() => setSelectedCustomer(null)} className="text-gray-400 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowDeleteConfirm(true)} 
+                  className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                  title="Delete User"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setShowDeleteConfirm(false);
+                  }} 
+                  className="text-gray-400 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+            
+            {showDeleteConfirm && (
+              <div className="m-6 md:mx-8 mb-0 p-4 border-2 border-red-200 bg-red-50 rounded-xl flex flex-col gap-3">
+                <div className="flex items-start gap-3 text-red-800">
+                  <AlertTriangle className="w-6 h-6 shrink-0 mt-0.5 text-red-600" />
+                  <div>
+                    <h4 className="font-bold text-red-900">Warning: Hard Delete</h4>
+                    <p className="text-sm mt-1">
+                      Are you sure you want to permanently delete <strong>{selectedCustomer.name}</strong>? This will also instantly remove all of their subscriptions. This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button 
+                    variant="inverted"
+                    className="!py-2 !px-4 text-xs font-semibold !text-gray-600 !border-gray-200 hover:!bg-white"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="primary"
+                    className="!py-2 !px-4 text-xs font-semibold !bg-red-600 !text-white hover:!bg-red-700 !border-red-600"
+                    onClick={handleDelete}
+                    isLoading={isDeleting}
+                  >
+                    Confirm Delete
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <div className="flex-1 overflow-y-auto p-6 md:px-8 space-y-8 bg-gray-50/30">
               
